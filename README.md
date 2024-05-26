@@ -1,0 +1,2 @@
+# mplib
+Multiplayer JavaScript Library
