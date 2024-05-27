@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Example</title>
+    <style>
+        /* CSS styles */
+        html, body {
+            cursor: default; 
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: linear-gradient(180deg, #64BEFF -50%, #6e96ff 69.71%, #2a65ff 150%);
+            font-family: 'Source Sans Pro', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .box {
+            padding: 5px 50px;
+            max-width: 700px;
+            margin: auto;
+            text-align: center;
+            font-size: 20px; 
+            border-radius: 15px;
+            border: 3px solid black;               
+        }
+
+        .textm {
+            padding: 20px 20px;                           
+            font-weight: normal;          
+        }
+
+        .titlebox {
+            font-size: 1.75em; /* or use h3 specific size */
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="box" id="instructionsScreen" style="background-color: rgb(234, 223, 223);">
+        <div class="titlebox">Instructions</div>  
+        <p>Instructions appear here...</p>
+        <button id="joinBtn">Proceed</button> 
+    </div>
+    <div class="box" id="waitingRoomScreen" style="background-color: rgb(232, 229, 192); display: none; ">
+        <div class="titlebox">Waiting Room</div>  
+        <div class="textm" id="messageWaitingRoom"></div>
+        <br> 
+    </div>
+    <div class="box" id="gameScreen" style="background-color: rgb(243, 243, 139); display: none;">
+        <div class="titlebox">Game Screen</div>
+        <p>The game has started...</p>   
+        <div class="textm" id="messageGameRoom"></div>
+        <br>
+        <button id="leaveBtn">Leave Game</button> 
+    </div>
+    
+    
+    <script src="/src/mpconfig.js"></script>
+    <script>
+        // Filename of the game code (needs to match file below)
+        var jsCode = '/examples/testmplib.js';
+    </script>
+
+    <script type="module" src="/src/mplib.js" async></script>
+    <script type="module" src="/examples/testmplib.js"></script>
+</body>
+
+</html>
