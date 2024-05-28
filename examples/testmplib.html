@@ -1,63 +1,48 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Example</title>
-    <style>
-        /* CSS styles */
-        html, body {
-            cursor: default; 
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            background: linear-gradient(180deg, #64BEFF -50%, #6e96ff 69.71%, #2a65ff 150%);
-            font-family: 'Source Sans Pro', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .box {
-            padding: 5px 50px;
-            max-width: 700px;
-            margin: auto;
-            text-align: center;
-            font-size: 20px; 
-            border-radius: 15px;
-            border: 3px solid black;               
-        }
-
-        .textm {
-            padding: 20px 20px;                           
-            font-weight: normal;          
-        }
-
-        .titlebox {
-            font-size: 1.75em; /* or use h3 specific size */
-            font-weight: bold;
-        }
-    </style>
+    <title>Demonstration of MPLIB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./general.css">
 </head>
 
 <body>
-    <div class="box" id="instructionsScreen" style="background-color: rgb(234, 223, 223);">
-        <div class="titlebox">Instructions</div>  
-        <p>Instructions appear here...</p>
-        <button id="joinBtn">Proceed</button> 
+    <div class="container" id="instructionsScreen">
+        <h1>Instructions</h1>
+        <div class="containertext" id="instructionText">
+        <p> 
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor 
+        in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, 
+        sunt in culpa qui officia deserunt mollit anim id est laborum. Curabitur pretium tincidunt lacus. 
+        </p> 
+        <p>
+        Nulla gravida orci a odio. Nullam varius, 
+        turpis et commodo pharetra, est eros bibendum elit, nec luctus magna felis sollicitudin mauris. Integer in mauris eu nibh euismod gravida. 
+        Duis ac tellus et risus vulputate vehicula. Donec lobortis risus a elit. Etiam tempor. Ut ullamcorper, ligula eu tempor congue, eros est 
+        euismod turpis, id tincidunt sapien risus a quam. Maecenas fermentum consequat mi. Donec fermentum. Pellentesque malesuada nulla a mi. 
+        Duis sapien sem, aliquet nec, commodo eget, consequat quis, neque. Aliquam faucibus, elit ut dictum aliquet, felis nisl adipiscing sapien, 
+        sed malesuada diam lacus eget erat. Cras mollis scelerisque nunc. Nullam arcu. Aliquam consequat. Curabitur augue lorem, dapibus quis, 
+        laoreet et, pretium ac, nisi. Aenean magna nisl, mollis quis, molestie eu, feugiat in, orci. In hac habitasse platea dictumst.
+        </p>
+        </div>
+        <a href="#" class="button" id="joinBtn">Proceed</a> 
     </div>
-    <div class="box" id="waitingRoomScreen" style="background-color: rgb(232, 229, 192); display: none; ">
-        <div class="titlebox">Waiting Room</div>  
-        <div class="textm" id="messageWaitingRoom"></div>
-        <br> 
+    <div class="container" id="waitingRoomScreen" style="display:none">
+        <h1>Waiting Room</h1>  
+        <div class="containertext" id="messageWaitingRoom"></div>
     </div>
-    <div class="box" id="gameScreen" style="background-color: rgb(243, 243, 139); display: none;">
-        <div class="titlebox">Game Screen</div>
-        <p>The game has started...</p>   
-        <div class="textm" id="messageGameRoom"></div>
-        <br>
-        <button id="leaveBtn">Leave Game</button> 
+    <div class="container" id="gameScreen" style="display:none">
+        <h1>Game</h1>
+        <div class="containertext" id="messageGame"></div>
+        <a href="#" class="button" id="leaveBtn">End Session</a> 
+    </div>
+    <div class="container" id="finishScreen" style="display:none">
+        <h1>Completion</h1>  
+        <div class="containertext" id="messageFinish"></div>
     </div>
     
     

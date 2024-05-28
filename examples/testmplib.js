@@ -1,13 +1,12 @@
 // --------------------------------------------------------------------------------------
 //    Demonstration Code
-//    This code demonstrates how MPLIB can be used to track how players
-//    join and leave sessions. The browser displays the status of a session;
-//    when a waiting room is activated and when a player joins a session 
+//    Skeleton code to demonstrate how MPLIB can be used to program a waiting room
+//    and a game room (without any game). Both the waiting and game room display
+//    the number of players currently waiting or playing 
 // --------------------------------------------------------------------------------------
 
 // to do:
-//  test  failureJoinSession and disconnect
-
+// hasControl
 
 // -------------------------------------
 // Importing functions and variables from 
@@ -25,14 +24,16 @@ import {
 //       Game configuration
 // -------------------------------------
 // studyId is the name of the root node we create in the database
-export const studyId = 'testlib'; 
+export const studyId = 'testmplib'; 
 // Configuration setting for the session
 export const sessionConfig = {
-    minNeeded: 2, // Minimum number of players needed; if set to 1, there is no waiting room
-    maxNeeded: 3, // Maximum number of players allowed in session
-    maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there is no limit)
-    allowReplacements: true, // Do we allow replacing any players who leave active sessions?
-    maxHours: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
+    minPlayersNeeded: 1, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
+    maxPlayersNeeded: 3, // Maximum number of players allowed in a session
+    maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
+    allowReplacements: true, // Allow replacing any players who leave an ongoing session?
+    exitDelayWaitingRoom: 0, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
+    maxDurationBelowMinPlayersNeeded: 10, // Number of seconds to continue an active session even though there are fewer than the minimum number of players (if set to zero, session terminates immediately)
+    maxHoursSession: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
     recordData: false // Record all data?  
 };
 export const verbosity = 2;
@@ -44,6 +45,7 @@ updateConfigFromUrl( sessionConfig );
 //       Globals
 // -------------------------------------
 
+
 // -------------------------------------
 //       Graphics handles
 // -------------------------------------
@@ -51,7 +53,8 @@ let instructionsScreen = document.getElementById('instructionsScreen');
 let waitingRoomScreen = document.getElementById('waitingRoomScreen');
 let gameScreen = document.getElementById('gameScreen');
 let messageWaitingRoom = document.getElementById('messageWaitingRoom');
-let messageGameRoom = document.getElementById('messageGameRoom');
+let messageGame = document.getElementById('messageGame');
+let messageFinish = document.getElementById('messageFinish');
 
 // -------------------------------------
 //       Event Listeners
@@ -66,8 +69,7 @@ joinButton.addEventListener('click', function () {
 });
 
 leaveButton.addEventListener('click', function () {
-    leaveSession(); // call the library function to leave a session
-    displayMessage(`Player ${arrivalIndex} (${playerId}) left the session`, 'orange');
+    leaveSession(); // call the library function to leave a session. This then triggers the local function endSession
 });
 
 // --------------------------------------------------------------------------------------
@@ -80,22 +82,23 @@ leaveButton.addEventListener('click', function () {
 export function joinedWaitingRoom(sessionInfo) {
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
-    //let dateString = timeStr(sessionInfo.waitingRoomStartedAt);
-    //let str = `Player ${sessionInfo.arrivalIndex} (${sessionInfo.playerId}) joined waiting room for session ${sessionInfo.sessionIndex} that started at ${dateString}. There are ${sessionInfo.numPlayers} waiting total.`; 
-    //myconsolelog( str );
 
-    let numNeeded = sessionConfig.minNeeded - sessionInfo.numPlayers;
+    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
     let str2 = `Waiting for ${ numNeeded } additional players...`;
     messageWaitingRoom.innerText = str2;
 }
 
 // This callback function is triggered when waiting room is still ongoing, but number of players waiting changes
 export function updateWaitingRoom(sessionInfo) {
-    //let dateString = timeStr(sessionInfo.waitingRoomStartedAt);
-    //let str = `Player ${sessionInfo.arrivalIndex} (${sessionInfo.playerId}) joined waiting room for session ${sessionInfo.sessionIndex} that started at ${dateString}. There are ${sessionInfo.numPlayers} waiting total.`; 
-
-    let numNeeded = sessionConfig.minNeeded - sessionInfo.numPlayers;
-    let str2 = `Waiting for ${ numNeeded } additional players...`;
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'block';
+    let str2;
+    if (sessionInfo.status == 'waitingRoomCountdown') {
+        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+    }  else {
+        let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
+        str2 = `Waiting for ${ numNeeded } additional players...`;
+    } 
     messageWaitingRoom.innerText = str2;
 }
 
@@ -109,8 +112,8 @@ export function startSession(sessionInfo) {
     let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
     myconsolelog( str );
 
-    let str2 = `<p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    messageGameRoom.innerHTML = str2;
+    let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+    messageGame.innerHTML = str2;
 }
 
 // This callback function is triggered when session is active, but number of players changes
@@ -119,18 +122,22 @@ export function updateSession(sessionInfo) {
     let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
     myconsolelog( str );
 
-    let str2 = `<p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    messageGameRoom.innerHTML = str2;
+    let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+    messageGame.innerHTML = str2;
 }
 
-// This callback function is triggered when a player is unable to join a session (e.g., because the maximum number of sessions has been reached)
-export function failureJoinSession( sessionInfo ) {
-    //displayMessage(`Player ${sessionInfo.arrivalIndex} (${sessionInfo.playerId}) was unable to join a session`, 'red');
-}
+export function endSession( sessionInfo ) {
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'none';
+    gameScreen.style.display = 'none';
+    finishScreen.style.display = 'block';
 
-// This callback function is triggered when the client's browser is disconnected from the internet
-export function disconnected() {
-    //displayMessage(`Disconnected from session. Game is terminated`, 'red');
+    if (sessionInfo.sessionErrorCode != 0) {
+        messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
+    } else {
+        messageFinish.innerHTML = `<p>You have completed the session.</p>`;
+    }
+    
 }
 
 // This callback function is triggered when this client gains control over dynamic objects
@@ -153,19 +160,6 @@ function myconsolelog(message) {
     }
 }
 
-/*
-function displayMessage(message, color) {
-    // Select the first element with the "rounded-square" class
-    var element = document.querySelector('.rounded-square');
-    // Change the background color
-    //element.style.backgroundColor = color;
-
-    let messageDiv = document.getElementById('messageWaitingRoom');
-    messageDiv.innerText = message;
-
-    myconsolelog(message);
-}
-*/
 
 // Converts the server-side timestamp expressed in milliseconds since the Unix Epoch to a string in local time
 function timeStr(timestamp) {
