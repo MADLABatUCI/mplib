@@ -6,6 +6,7 @@
 # Added by MS
 test/
 src/notes.md
+.vscode/
 
 # User-specific files
 *.rsuser
