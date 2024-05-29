@@ -1,10 +1,7 @@
 // Firebase MultiPlayer Library v. 1.20
 // Author: Mark Steyvers
+// The code uses the modular and functional approach of Firebase version 9
 
-// to do:
-
-
-// The following code uses the modular and functional approach of Firebase version 9
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-auth.js"; // "./firebase/firebase-auth.js"; 
 import {

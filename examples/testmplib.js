@@ -1,12 +1,9 @@
 // --------------------------------------------------------------------------------------
-//    Demonstration Code
 //    Skeleton code to demonstrate how MPLIB can be used to program a waiting room
 //    and a game room (without any game). Both the waiting and game room display
 //    the number of players currently waiting or playing 
 // --------------------------------------------------------------------------------------
 
-// to do:
-// hasControl
 
 // -------------------------------------
 // Importing functions and variables from 
