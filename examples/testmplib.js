@@ -148,6 +148,22 @@ export function losesControl() {
     myconsolelog('Client loses control');
 }
 
+// -------------------------------------------------------------------------------------
+//       Handle events triggered by MPLIB related to changes in the game state
+// -------------------------------------------------------------------------------------
+
+// This callback function is triggered by any change in the game state accepted by MPLIB. 
+// Note that the state change can occur in any of the clients connected in the session 
+// typeChange can take on the following values:
+// 'onChildChanged'  This event is triggered any time a child node is modified. This includes any modifications to descendants of the child node. 
+// 'onChildAdded'    This event is triggered for each existing child and then every time a new child is added 
+// 'onChildRemoved'  This event is triggered when an immediate child is removed
+export function receiveStateChange( objectId, state, typeChange ) {
+    // Not used in this code
+}
+
+
+
 // -------------------------------------
 //       Display Information
 // -------------------------------------

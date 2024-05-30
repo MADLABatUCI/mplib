@@ -1,6 +1,7 @@
-// Firebase MultiPlayer Library v. 1.20
-// Author: Mark Steyvers
-// The code uses the modular and functional approach of Firebase version 9
+/* ---------------------------------------------------------- 
+      Firebase MultiPlayer Library v. 1.20
+   ----------------------------------------------------------
+*/
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-auth.js"; // "./firebase/firebase-auth.js"; 
@@ -17,7 +18,8 @@ async function loadModule() {
     mpg = await import(jsCode);
 }
 
-// Globals for library
+
+// Initialize the session information that the client will see
 let si = {
     status: '',
     numPlayers: 0, 
@@ -32,14 +34,14 @@ let si = {
     sessionStartedAt: undefined,
     sessionErrorCode: 0,
     sessionErrorMsg: ''
- };
+};
 
 let hasControl = false;
 let initSession = false; // determines whether a session has be initiated 
 let sessionStarted = false;
-let gameStateRef;
+let StateRef;
 let presenceRef, connectedRef;
-let sessionsRef, sessionsDataRef, gameStateDataRef;
+let sessionsRef, sessionsDataRef, StateDataRef;
 let offsetRef;
 let serverTimeOffset = 0; // default
 let numPlayersBefore = 0;
@@ -286,7 +288,7 @@ export async function leaveSession() {
         off(connectedRef);
 
         // remove the listener for game state
-        off(gameStateRef);
+        off(StateRef);
     });
 
     
@@ -295,39 +297,55 @@ export async function leaveSession() {
 
 // Function to start an active session (e.g. coming out of a waiting room, or when a single player can start a session)
 function startSession() {
-    // Create a node for game state, one for transactions, and one for direct updates
-    gameStateRef = ref(db, `${mpg.studyId}/states/${si.sessionId}/`);
+    // Create a path to store the game state
+    StateRef = ref(db, `${mpg.studyId}/states/${si.sessionId}/`);
 
-    // Database location to store all recorded data about gamestate   
-    gameStateDataRef = ref(db, `${mpg.studyId}/data/gameState/${si.sessionId}`);
+    // Create a path to store all recorded gamestates   
+    StateDataRef = ref(db, `${mpg.studyId}/recordedData/states/${si.sessionId}`);
 
-    // Listen for changes in the game state 
-    onChildChanged(gameStateRef, (snapshot) => {
+    const listenerModel = 'childChanges';
+
+    if (listenerModel == 'childChanges') {
+        // Create a listener for changes in the state 
+        onChildChanged(StateRef, (snapshot) => {
+            const objectId = snapshot.key;
+            const state = snapshot.val();
+            if (state != null) {
+                // execute this function in the client game code 
+                mpg.receiveStateChange(objectId, state, 'onChildChanged');
+            }
+        });
+    } else {
+        // NOT TESTED YET !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // Create a listener for any change in the state 
+        onValue(StateRef, (snapshot) => {
+            const objectId = snapshot.key;
+            const state = snapshot.val();
+            if (state != null) {
+                // execute this function in the client game code 
+                mpg.receiveStateChange(objectId, state, 'onValue');
+            }
+        });
+    }
+    
+
+    // Create a listener for additions to the gamestate
+    onChildAdded(StateRef, (snapshot) => {
         const objectId = snapshot.key;
         const state = snapshot.val();
         if (state != null) {
             // execute this function in the client game code 
-            mpg.receiveAction(objectId, state, 'onChildChanged');
+            mpg.receiveStateChange(objectId, state, 'onChildAdded');
         }
     });
 
-    // Listen for additions to the gamestate
-    onChildAdded(gameStateRef, (snapshot) => {
+    // Create a listener for additions to the gamestate
+    onChildRemoved(StateRef, (snapshot) => {
         const objectId = snapshot.key;
         const state = snapshot.val();
         if (state != null) {
             // execute this function in the client game code 
-            mpg.receiveAction(objectId, state, 'onChildAdded');
-        }
-    });
-
-    // Listen for additions to the gamestate
-    onChildRemoved(gameStateRef, (snapshot) => {
-        const objectId = snapshot.key;
-        const state = snapshot.val();
-        if (state != null) {
-            // execute this function in the client game code 
-            mpg.receiveAction(objectId, state, 'onChildRemoved');
+            mpg.receiveStateChange(objectId, state, 'onChildRemoved');
         }
     });
 
@@ -390,7 +408,7 @@ function recordData(path, state) {
             path,
         };
 
-        let newDataRef = push(gameStateDataRef);
+        let newDataRef = push(StateDataRef);
         set(newDataRef, returnResult);
     } 
 }
@@ -448,7 +466,7 @@ export async function gameStateTransaction(path, action, actionArgs) {
                 actionArgs
             };
 
-            let newDataRef = push(gameStateDataRef);
+            let newDataRef = push(StateDataRef);
             set(newDataRef, returnResult);
         }
 
