@@ -14,7 +14,7 @@ import {
     leaveSession,
     gameStateTransaction,
     gameStateDirectUpdate,
-} from "/src/mplib.js";
+} from "/mplib/src/mplib.js";
 
 
 // -------------------------------------
