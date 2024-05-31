@@ -17,7 +17,7 @@ import {
     leaveSession,
     directUpdateState,
     hasControl
-} from "/src/mplib.js";
+} from "/mplib/src/mplib.js";
 
 
 // -------------------------------------
