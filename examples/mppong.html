@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Player Pong</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/examples/general.css">
+    <style>
+        /* Game-specific styles */
+        #pongCanvas {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .score-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 700px;
+            margin-top: 10px;
+            margin: 10px auto 0; /* Center horizontally */
+        }
+        .score {
+            font-size: 2em;
+            font-family: 'Poppins', sans-serif;
+        }
+        .left-score {
+            text-align: left;
+            flex: 1;
+        }
+        .right-score {
+            text-align: right;
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="instructionsScreen">
+        <h1>Instructions</h1>
+        <div class="containertext" id="instructionText">
+        
+        </div>
+        <a href="#" class="button" id="joinBtn">Proceed</a> 
+    </div>
+    <div class="container" id="waitingRoomScreen" style="display:none">
+        <h1>Waiting Room</h1>  
+        <div class="containertext" id="messageWaitingRoom"></div>
+    </div>
+    <div class="container" id="gameScreen" style="display:none; caret-color: transparent;">
+        <h1>Two Player Pong Game</h1>
+        <canvas id="pongCanvas" width="700" height="400"></canvas>
+        <div class="score-container">
+            <div class="score left-score" id="scorePlayer1">Player 1: 0</div>
+            <div class="score right-score" id="scorePlayer2">Player 2: 0</div>
+        </div>
+        <div class="score-container">
+            <div class="score left-score" id="labelPlayer1"></div>
+            <div class="score right-score" id="labelPlayer2"></div>        
+        </div>
+        <div class="containertext" id="messageGame"></div>
+        <a href="#" class="button" id="leaveBtn">End Session</a> 
+    </div>
+    <div class="container" id="finishScreen" style="display:none">
+        <h1>Completion</h1>  
+        <div class="containertext" id="messageFinish"></div>
+    </div>
+    
+    
+    <script src="/src/mpconfig.js"></script>
+    <script>
+        // Filename of the game code (needs to match file below)
+        var jsCode = '/examples/mppong.js';
+    </script>
+
+    <script type="module" src="/src/mplib.js" async></script>
+    <script type="module" src="/examples/mppong.js"></script>
+</body>
+
+</html>

@@ -36,7 +36,9 @@ let si = {
     sessionErrorMsg: ''
 };
 
-let hasControl = false;
+export let hasControl = false;
+
+
 let initSession = false; // determines whether a session has be initiated 
 let sessionStarted = false;
 let StateRef;
@@ -308,22 +310,22 @@ function startSession() {
     if (listenerModel == 'childChanges') {
         // Create a listener for changes in the state 
         onChildChanged(StateRef, (snapshot) => {
-            const objectId = snapshot.key;
+            const nodeName = snapshot.key;
             const state = snapshot.val();
             if (state != null) {
                 // execute this function in the client game code 
-                mpg.receiveStateChange(objectId, state, 'onChildChanged');
+                mpg.receiveStateChange(nodeName, state, 'onChildChanged');
             }
         });
     } else {
         // NOT TESTED YET !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         // Create a listener for any change in the state 
         onValue(StateRef, (snapshot) => {
-            const objectId = snapshot.key;
+            const nodeName = snapshot.key;
             const state = snapshot.val();
             if (state != null) {
                 // execute this function in the client game code 
-                mpg.receiveStateChange(objectId, state, 'onValue');
+                mpg.receiveStateChange(nodeName, state, 'onValue');
             }
         });
     }
@@ -331,21 +333,21 @@ function startSession() {
 
     // Create a listener for additions to the gamestate
     onChildAdded(StateRef, (snapshot) => {
-        const objectId = snapshot.key;
+        const nodeName = snapshot.key;
         const state = snapshot.val();
         if (state != null) {
             // execute this function in the client game code 
-            mpg.receiveStateChange(objectId, state, 'onChildAdded');
+            mpg.receiveStateChange(nodeName, state, 'onChildAdded');
         }
     });
 
     // Create a listener for additions to the gamestate
     onChildRemoved(StateRef, (snapshot) => {
-        const objectId = snapshot.key;
+        const nodeName = snapshot.key;
         const state = snapshot.val();
         if (state != null) {
             // execute this function in the client game code 
-            mpg.receiveStateChange(objectId, state, 'onChildRemoved');
+            mpg.receiveStateChange(nodeName, state, 'onChildRemoved');
         }
     });
 
@@ -383,7 +385,7 @@ window.addEventListener('blur', function () {
 // This function allows for direct changes to a gamestate without checking for conflicts
 // Use these updates to speed up games with continuous movements where players' movements do
 // not conflict with each other
-export function gameStateDirectUpdate(path, newState) {
+export function directUpdateState(path, newState) {
     let refNow = ref(db, `${mpg.studyId}/states/${si.sessionId}/${path}`);
     if (newState == null) {
         // If the proposed state is null, use that to remove the node (so we can clean up the gamestate for players who leave the game)

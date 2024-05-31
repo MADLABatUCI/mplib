@@ -81,7 +81,9 @@ export function joinedWaitingRoom(sessionInfo) {
     waitingRoomScreen.style.display = 'block';
 
     let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let str2 = `Waiting for ${ numNeeded } additional players...`;
+    let numPlayers = sessionInfo.numPlayers;
+    let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
+
     messageWaitingRoom.innerText = str2;
 }
 
@@ -89,12 +91,13 @@ export function joinedWaitingRoom(sessionInfo) {
 export function updateWaitingRoom(sessionInfo) {
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
+    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
+    let numPlayers = sessionInfo.numPlayers;
     let str2;
     if (sessionInfo.status == 'waitingRoomCountdown') {
         str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
-    }  else {
-        let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-        str2 = `Waiting for ${ numNeeded } additional players...`;
+    }  else {       
+        str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
     } 
     messageWaitingRoom.innerText = str2;
 }

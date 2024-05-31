@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demonstration of MPLIB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/examples/general.css">
+</head>
+
+<body>
+    <div class="container" id="instructionsScreen">
+        <h1>Instructions</h1>
+        <div class="containertext" id="instructionText">
+        <p> 
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor 
+        in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, 
+        sunt in culpa qui officia deserunt mollit anim id est laborum. Curabitur pretium tincidunt lacus. 
+        </p> 
+        <p>
+        Nulla gravida orci a odio. Nullam varius, 
+        turpis et commodo pharetra, est eros bibendum elit, nec luctus magna felis sollicitudin mauris. Integer in mauris eu nibh euismod gravida. 
+        Duis ac tellus et risus vulputate vehicula. Donec lobortis risus a elit. Etiam tempor. Ut ullamcorper, ligula eu tempor congue, eros est 
+        euismod turpis, id tincidunt sapien risus a quam. Maecenas fermentum consequat mi. Donec fermentum. Pellentesque malesuada nulla a mi. 
+        Duis sapien sem, aliquet nec, commodo eget, consequat quis, neque. Aliquam faucibus, elit ut dictum aliquet, felis nisl adipiscing sapien, 
+        sed malesuada diam lacus eget erat. Cras mollis scelerisque nunc. Nullam arcu. Aliquam consequat. Curabitur augue lorem, dapibus quis, 
+        laoreet et, pretium ac, nisi. Aenean magna nisl, mollis quis, molestie eu, feugiat in, orci. In hac habitasse platea dictumst.
+        </p>
+        </div>
+        <a href="#" class="button" id="joinBtn">Proceed</a> 
+    </div>
+    <div class="container" id="waitingRoomScreen" style="display:none">
+        <h1>Waiting Room</h1>  
+        <div class="containertext" id="messageWaitingRoom"></div>
+    </div>
+    <div class="container" id="gameScreen" style="display:none">
+        <h1>Game</h1>
+        <div class="containertext" id="messageGame"></div>
+        <a href="#" class="button" id="leaveBtn">End Session</a> 
+    </div>
+    <div class="container" id="finishScreen" style="display:none">
+        <h1>Completion</h1>  
+        <div class="containertext" id="messageFinish"></div>
+    </div>
+    
+    
+    <script src="/src/mpconfig.js"></script>
+    <script>
+        // Filename of the game code (needs to match file below)
+        var jsCode = '/examples/testmplib.js';
+    </script>
+
+    <script type="module" src="/src/mplib.js" async></script>
+    <script type="module" src="/examples/testmplib.js"></script>
+</body>
+
+</html>

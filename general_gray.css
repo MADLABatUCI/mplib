@@ -1,0 +1,71 @@
+/* CSS styles */
+
+body {
+    font-family: 'Poppins', sans-serif;
+    /*font-family: 'Quicksand', sans-serif;*/
+    background: linear-gradient(135deg, #e0e0e0, #c0c0c0);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.container {
+    /*text-align: center;*/
+    background: rgba(255, 255, 255, 0.8);
+    /*background: rgba(100, 100, 100, 0.1);*/
+    padding: 10px;
+    border-radius: 15px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    width: 80%;
+    max-width: 800px;
+    min-width: 800px;
+    margin: 20px 0px; 
+}
+
+h1 {
+    font-size: 2.0em;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center
+}
+
+.containertext {
+    font-size: 1.1em;
+    text-align: justify;
+    margin-left: 5%;
+    margin-right: 5%;
+}
+
+.button {
+    display: inline-block;
+    padding: 10px 25px;
+    margin-top: 20px;
+    background-color: #a9a9a9;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s, transform 0.3s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.button:hover {
+    background-color: #808080;
+    transform: translateY(-3px);
+}
+
+ul > li {
+    font-weight: bold;
+    margin-bottom: 15px; /* Adjust the value as needed */
+}
+
+ul ul > li {
+    font-weight: normal;
+    margin-bottom: 0; /* Ensures no extra margin for second-level items */
+
+}

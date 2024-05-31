@@ -1,41 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <style>
-        .demo-box {
-            border: 2px solid black;
-            border-radius: 10px;
-            padding: 20px;
-            width: 500px;
-            margin: 0 auto;
-            box-sizing: border-box;
-        }
-        .demo-box h2 {
-            text-align: center;
-        }
-        .demo-box ul {
-            list-style-type: none;
-            /*padding-left: 0*/
-        }
-        .demo-box ul li a {
-            text-decoration: none;
-            color: blue;
-        }
-        .demo-box ul li a:hover {
-            color: red;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPLIB Demonstrations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="general_gray.css">
 </head>
 <body>
-    <div class="demo-box">
-        <h2>MPLIB demos</h2>
+    <div class="container">
+        <h1>MPLIB demos</h1>
         <ul>
             <li>
-                Test session start/stop
+                Skeleton code for testing session formation
                 <ul>
-                    <li><a href="examples/testmplib.html?minNeeded=1&maxNeeded=2">minplayers=1; maxplayers=2</a></li>
-                    <li><a href="examples/testmplib.html?minNeeded=2&maxNeeded=2">minplayers=2; maxplayers=2</a></li>
-                    <li><a href="examples/testmplib.html?minNeeded=3&maxNeeded=3">minplayers=3; maxplayers=3</a></li>
+                    <li><a href="examples/mpskeleton.html?minNeeded=1&maxNeeded=2">minplayers=1; maxplayers=2</a></li>
+                    <li><a href="examples/mpskeleton.html?minNeeded=2&maxNeeded=2">minplayers=2; maxplayers=2</a></li>
+                    <li><a href="examples/mpskeleton.html?minNeeded=3&maxNeeded=3">minplayers=3; maxplayers=3</a></li>
+                </ul>
+            </li>
+            <li>
+                Two-player pong
+                <ul>
+                    <li><a href="examples/mppong.html?minNeeded=2&maxNeeded=2&fps=30">30fps</a></li>
+                    <li><a href="examples/mppong.html?minNeeded=2&maxNeeded=2&fps=60">60fps</a></li>
                 </ul>
             </li>
         </ul>
