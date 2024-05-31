@@ -12,7 +12,7 @@
 import {
     joinSession,
     leaveSession,
-    directUpdateState,
+    directUpdateState, 
     hasControl
 } from "/mplib/src/mplib.js";
 
