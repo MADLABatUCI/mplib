@@ -43,7 +43,7 @@ let initSession = false; // determines whether a session has be initiated
 let sessionStarted = false;
 let StateRef;
 let presenceRef, connectedRef;
-let sessionsRef, sessionsDataRef, StateDataRef;
+let sessionsRef, sessionsDataRef, recordEventsRef;
 let offsetRef;
 let serverTimeOffset = 0; // default
 let numPlayersBefore = 0;
@@ -116,6 +116,7 @@ await onAuthStateChanged(auth, (user) => {
                                     si.status = 'waitingRoomStarted';
                                     si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
                                     mpg.joinedWaitingRoom( si );
+                                    recordSessionEvent( si );
                                 } else if ((currentStatus == 'active') & (!sessionStarted)) {
                                     initSession = true;
                                     sessionStarted = true;
@@ -128,6 +129,7 @@ await onAuthStateChanged(auth, (user) => {
 
                                     if (mpg.sessionConfig.exitDelayWaitingRoom==0) {
                                         si.status = 'sessionStarted';
+                                        recordSessionEvent( si );
                                         startSession(); // Can start the session without delay
                                     } else {
                                         // Delay the start of entering the session
@@ -142,6 +144,7 @@ await onAuthStateChanged(auth, (user) => {
                                             } else {
                                                 clearInterval(intervalId); 
                                                 si.status = 'sessionStarted';
+                                                recordSessionEvent( si );
                                                 startSession();
                                             }
                                         }, 1000);
@@ -151,6 +154,7 @@ await onAuthStateChanged(auth, (user) => {
                                     numPlayersBefore = si.numPlayers;
                                     if (currentStatus == 'waiting') {
                                         si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
+                                        recordSessionEvent( si );
                                         mpg.updateWaitingRoom( si );
                                     }
                                     if (currentStatus == 'active') {
@@ -158,7 +162,8 @@ await onAuthStateChanged(auth, (user) => {
                                         if (si.status == 'waitingRoomCountdown') {
                                             // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
                                             // ...
-                                        } else {                                        
+                                        } else {
+                                            recordSessionEvent( si );                                        
                                             mpg.updateSession( si );
 
                                             // Check if the number of players is below the minimum
@@ -167,6 +172,7 @@ await onAuthStateChanged(auth, (user) => {
                                                     // Leave session immediately
                                                     si.sessionErrorCode = 3;
                                                     si.sessionErrorMsg = 'Number of players fell below minimum needed';
+                                                    recordSessionEvent( si );
                                                     leaveSession();
                                                 } else if (hasControl) {
                                                     // Initiate a timer countdown
@@ -175,6 +181,7 @@ await onAuthStateChanged(auth, (user) => {
                                                         console.log('Ending session....');
                                                         si.sessionErrorCode = 3;
                                                         si.sessionErrorMsg = 'Number of players fell below minimum needed';
+                                                        recordSessionEvent( si );
                                                         leaveSession();
                                                     }, mpg.sessionConfig.maxDurationBelowMinPlayersNeeded * 1000 );
                                                 }
@@ -303,7 +310,7 @@ function startSession() {
     StateRef = ref(db, `${mpg.studyId}/states/${si.sessionId}/`);
 
     // Create a path to store all recorded gamestates   
-    StateDataRef = ref(db, `${mpg.studyId}/recordedData/states/${si.sessionId}`);
+    recordEventsRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/events/`);
 
     const listenerModel = 'childChanges';
 
@@ -404,15 +411,34 @@ function recordData(path, state) {
     // Are we recording the data?
     if (mpg.sessionConfig.recordData) {
         let returnResult = {
-            state,
-            timestamp: serverTimestamp(),
-            playerId: si.playerId,
-            path,
+            s: state,
+            t: serverTimestamp(),
+            pId: si.playerId,
+            p: path,
         };
-
-        let newDataRef = push(StateDataRef);
+        
+        let newDataRef = push(recordEventsRef);
         set(newDataRef, returnResult);
     } 
+}
+
+function recordSessionEvent( si ) {
+    // Are we recording the data?
+    /*
+    if (mpg.sessionConfig.recordData) {
+        // Create a path to store all recorded gamestates   
+        let recordSessionRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/session/`);
+
+        let returnResult = {
+            s: si,
+            t: serverTimestamp(),
+        };
+        
+        let newDataRef = push(recordSessionRef);
+        set(newDataRef, returnResult);
+    } 
+    */
+    
 }
 
 
@@ -468,7 +494,7 @@ export async function gameStateTransaction(path, action, actionArgs) {
                 actionArgs
             };
 
-            let newDataRef = push(StateDataRef);
+            let newDataRef = push(recordEventsRef);
             set(newDataRef, returnResult);
         }
 
@@ -728,15 +754,21 @@ async function sessionUpdate(action, thisPlayer) {
             isSuccess: result.committed, action: action, sessionsState: newState,
             player: thisPlayer, initiatingPlayer: si.playerId, timestamp: serverTimestamp()
         };
+
+
+        
         // Are we recording the session data?
+        /*
         if (mpg.sessionConfig.recordData) {
             // Database reference to all recorded data about sessions   
-            sessionsDataRef = ref(db, `${mpg.studyId}/data/sessions/${si.sessionId}`);
+            sessionsDataRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/sessions//sessionInfo`);
 
             // Create a new child under session data
             let newDataRef = push(sessionsDataRef);
             set(newDataRef, returnResult);
         }
+        */
+        
 
         return returnResult;
 

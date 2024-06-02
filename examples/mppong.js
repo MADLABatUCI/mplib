@@ -76,10 +76,10 @@ let oldPlayer2Y = player2Y;
 
 let ballX = canvasWidth / 2;
 let ballY = Math.random() * canvasHeight; // Random vertical starting point
-let minBallSpeedX = 150.0 / fps;
-let minBallSpeedY = 150.0 / fps;
-let maxBallSpeedX = 250 / fps;
-let maxBallSpeedY = 250 / fps;
+let minBallSpeedX = 100.0 / fps;
+let minBallSpeedY = 100.0 / fps;
+let maxBallSpeedX = 150 / fps;
+let maxBallSpeedY = 150 / fps;
 let ballSpeedX = minBallSpeedX;
 let ballSpeedY = minBallSpeedY;
 let oldBallX = ballX;
