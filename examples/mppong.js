@@ -48,6 +48,11 @@ let arrivalIndex;
 
 let fps = 30; // Set the desired framerate here
 
+// Allow updating of some game settings by URL parameters
+let value = getURLParameterByName('fps');
+if (value !== null) fps = value;
+console.log(`FPS = ${fps}`);
+
 let timerId;
 let useCursorKeys = false;
 
@@ -76,21 +81,16 @@ let oldPlayer2Y = player2Y;
 
 let ballX = canvasWidth / 2;
 let ballY = Math.random() * canvasHeight; // Random vertical starting point
-let minBallSpeedX = 100.0 / fps;
-let minBallSpeedY = 100.0 / fps;
-let maxBallSpeedX = 150 / fps;
-let maxBallSpeedY = 150 / fps;
-let ballSpeedX = minBallSpeedX;
-let ballSpeedY = minBallSpeedY;
+let minBallSpeedInit = 200.0 / fps;
+let maxBallSpeedInit = 400 / fps;
+let maxBallSpeedTot  = 600 / fps;
+
+let ballSpeedX = minBallSpeedInit;
+let ballSpeedY = minBallSpeedInit;
 let oldBallX = ballX;
 let oldBallY = ballY;
 
 
-// Allow updating of some game settings by URL parameters
-let value = getURLParameterByName('fps');
-if (value !== null) fps = value;
-
-console.log(`FPS = ${fps}`);
 
 // -------------------------------------
 //       Graphics handles
@@ -275,6 +275,7 @@ function updateBallPosition() {
         // Ball hit player 1 paddle
         newBallX = player1X + playerWidth + 1 + ballSize;
         newBallSpeedX = Math.abs( newBallSpeedX ) + player1XSpeed;
+        if (newBallSpeedX > maxBallSpeedTot) newBallSpeedX = maxBallSpeedTot;
 
     } else if (checkHit( player2X, player2Y, newBallX, newBallY) || 
                doIntersect( player2X,player2Y,player2X,player2Y+playerHeight,  oldBallX,oldBallY,newBallX,newBallY) ||
@@ -282,6 +283,7 @@ function updateBallPosition() {
         // Ball hit player 2 paddle
         newBallX = player2X - 1 - ballSize;
         newBallSpeedX = -Math.abs( newBallSpeedX ) - player2XSpeed;
+        if (newBallSpeedX < -maxBallSpeedTot) newBallSpeedX = -maxBallSpeedTot;
     } else
     {
         // Check if it hit the lower or upper walls
@@ -468,8 +470,8 @@ function drawMidline() {
 function resetBall() {
     let newX = canvasWidth / 2;
     let newY = Math.random() * canvasHeight; // Random vertical starting point
-    let newSpeedX = ( Math.random()*(maxBallSpeedX-minBallSpeedX) + minBallSpeedX) * (Math.random() < 0.5 ? 1 : -1);
-    let newSpeedY = ( Math.random()*(maxBallSpeedY-minBallSpeedY) + minBallSpeedY) * (Math.random() < 0.5 ? 1 : -1);
+    let newSpeedX = ( Math.random()*(maxBallSpeedInit-minBallSpeedInit) + minBallSpeedInit) * (Math.random() < 0.5 ? 1 : -1);
+    let newSpeedY = ( Math.random()*(maxBallSpeedInit-minBallSpeedInit) + minBallSpeedInit) * (Math.random() < 0.5 ? 1 : -1);
 
     newX = roundDecimal( newX , 1 );
     newY = roundDecimal( newY , 1 );
