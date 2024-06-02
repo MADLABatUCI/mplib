@@ -82,8 +82,8 @@ let oldPlayer2Y = player2Y;
 let ballX = canvasWidth / 2;
 let ballY = Math.random() * canvasHeight; // Random vertical starting point
 let minBallSpeedInit = 200.0 / fps;
-let maxBallSpeedInit = 400 / fps;
-let maxBallSpeedTot  = 600 / fps;
+let maxBallSpeedInit = 300 / fps;
+let maxBallSpeedTot  = 400 / fps;
 
 let ballSpeedX = minBallSpeedInit;
 let ballSpeedY = minBallSpeedInit;
@@ -174,7 +174,7 @@ function movePlayerMouse(e) {
     let currentY;
 
     // if this Client arrived first in the session, this will be player 1, and player 2 otherwise
-    if (arrivalIndex == 1) { 
+    if (arrivalIndex == 2) { 
         currentY = player1Y;
         currentX = player1X;
         minX = 0;
@@ -219,7 +219,7 @@ function movePlayerCursorKeys(e) {
     let minX;
     let path;
     // if this Client arrived first in the session, this will be player 1, and player 2 otherwise
-    if (arrivalIndex == 1) { 
+    if (arrivalIndex == 2) { 
         newPlayerY = player1Y;
         newPlayerX = player1X;
         minX = 0;
@@ -405,17 +405,6 @@ function doIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
     return false;
 }
 
-// Example usage
-/*
-const x1 = 1, y1 = 1, x2 = 10, y2 = 1;
-const x3 = 1, y3 = 2, x4 = 10, y4 = 2;
-
-console.log(doIntersect(x1, y1, x2, y2, x3, y3, x4, y4)); // Output: false (they don't intersect)
-
-const x5 = 10, y5 = 0, x6 = 0, y6 = 10;
-console.log(doIntersect(x1, y1, x2, y2, x5, y5, x6, y6)); // Output: true (they intersect)
-*/
-
 function drawAnimations() {
     animations.forEach(frame => {
         ctx.fillStyle = frame.color.replace('1)', `${frame.alpha})`); // Update alpha
@@ -577,8 +566,8 @@ export function startSession(sessionInfo) {
     let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
     myconsolelog( str );
 
-    //let str2 = `<p>Number of players: ${ sessionInfo.numPlayers} Session ID: ${ sessionInfo.sessionId}$</p>`;
-    //messageGame.innerHTML = str2;
+    let str2 = `<p>Number of players: ${ sessionInfo.numPlayers} Session ID: ${ sessionInfo.sessionId}$</p>`;
+    messageGame.innerHTML = str2;
 
     document.getElementById(`labelPlayer${arrivalIndex}`).textContent = `(You)`;
 
@@ -592,8 +581,8 @@ export function updateSession(sessionInfo) {
     let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
     myconsolelog( str );
 
-    //let str2 = `<p>Number of players: ${ sessionInfo.numPlayers} Session ID: ${ sessionInfo.sessionId}$</p>`;
-    //messageGame.innerHTML = str2;
+    let str2 = `<p>Number of players: ${ sessionInfo.numPlayers} Session ID: ${ sessionInfo.sessionId}$</p>`;
+    messageGame.innerHTML = str2;
 }
 
 export function endSession( sessionInfo ) {
@@ -614,13 +603,13 @@ export function endSession( sessionInfo ) {
 
 // This callback function is triggered when this client gains control over dynamic objects
 export function gainedControl() {
-    //myconsolelog('Client gained control');
+    myconsolelog('Client gained control');
 }
 
 // This  callback function is triggered when this client loses control over dynamic objects
 // e.g., when client's browser loses focus
 export function losesControl() {
-    //myconsolelog('Client loses control');
+    myconsolelog('Client loses control');
 }
 
 
