@@ -23,15 +23,15 @@ async function loadModule() {
 let si = {
     status: '',
     numPlayers: 0, 
-    playerId: undefined,
+    playerId: null,
     playerIds: [], 
-    sessionId: undefined, 
-    sessionIndex: undefined, 
-    arrivalIndex: undefined, 
+    sessionId: null, 
+    sessionIndex: null, 
+    arrivalIndex: null, 
     arrivalIndices: [],
-    waitingRoomStartedAt: undefined, 
-    countdown: undefined,
-    sessionStartedAt: undefined,
+    waitingRoomStartedAt: null, 
+    countdown: null,
+    sessionStartedAt: null,
     sessionErrorCode: 0,
     sessionErrorMsg: ''
 };
@@ -101,7 +101,7 @@ await onAuthStateChanged(auth, (user) => {
                                 si.numPlayers = Object.keys(session.players).length;
                                 si.playerIds = Object.keys( session.players );
                                 si.arrivalIndices = Object.values(session.players).map(player => player.arrivalIndex);
-                                si.countdown = undefined;
+                                si.countdown = null;
 
                                 // Does this player have control?
                                 hasControl = (session.playerControl == si.playerId);
@@ -115,8 +115,8 @@ await onAuthStateChanged(auth, (user) => {
                                     numPlayersBefore = si.numPlayers;
                                     si.status = 'waitingRoomStarted';
                                     si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
-                                    mpg.joinedWaitingRoom( si );
                                     recordSessionEvent( si );
+                                    mpg.joinedWaitingRoom( si );                                   
                                 } else if ((currentStatus == 'active') & (!sessionStarted)) {
                                     initSession = true;
                                     sessionStarted = true;
@@ -392,24 +392,24 @@ window.addEventListener('blur', function () {
 // This function allows for direct changes to a gamestate without checking for conflicts
 // Use these updates to speed up games with continuous movements where players' movements do
 // not conflict with each other
-export function directUpdateState(path, newState) {
+export function directUpdateState(path, newState, optionalParamSkipRecord = false ) {
     let refNow = ref(db, `${mpg.studyId}/states/${si.sessionId}/${path}`);
     if (newState == null) {
         // If the proposed state is null, use that to remove the node (so we can clean up the gamestate for players who leave the game)
-        remove(refNow).then( () => { recordData( path, newState )});
+        remove(refNow).then( () => { recordEventData( path, newState, optionalParamSkipRecord )});
     } else {
         // Note that with the firebase update function, it only changes the fields indicated in newState and leaves all other fields intact
         if (typeof newState === 'object') {
-            update(refNow, newState).then( () => { recordData( path, newState )});;
+            update(refNow, newState).then( () => { recordEventData( path, newState, optionalParamSkipRecord )});;
         } else {
-            set(refNow, newState).then( () => { recordData( path, newState )});;
+            set(refNow, newState).then( () => { recordEventData( path, newState, optionalParamSkipRecord )});;
         }
     }
 }
 
-function recordData(path, state) {
+function recordEventData(path, state, skipRecord ) {
     // Are we recording the data?
-    if (mpg.sessionConfig.recordData) {
+    if ((mpg.sessionConfig.recordData) && (!skipRecord)) {
         let returnResult = {
             s: state,
             t: serverTimestamp(),
@@ -424,21 +424,18 @@ function recordData(path, state) {
 
 function recordSessionEvent( si ) {
     // Are we recording the data?
-    /*
     if (mpg.sessionConfig.recordData) {
         // Create a path to store all recorded gamestates   
         let recordSessionRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/session/`);
 
         let returnResult = {
-            s: si,
-            t: serverTimestamp(),
+            sessionInfo: si,
+            serverTimeStamp: serverTimestamp(),
         };
         
         let newDataRef = push(recordSessionRef);
         set(newDataRef, returnResult);
     } 
-    */
-    
 }
 
 
@@ -485,13 +482,14 @@ export async function gameStateTransaction(path, action, actionArgs) {
 
         // Are we recording the data?
         if ((mpg.sessionConfig.recordData) && (isSuccess)) {
+            let newState = result.snapshot.val();
             let returnResult = {
-                state: result.snapshot.val(),
-                timestamp: serverTimestamp(),
-                playerId: si.playerId,
-                action,
-                path,
-                actionArgs
+                s: newState,
+                t: serverTimestamp(),
+                pId: si.playerId,
+                p: path,
+                a: action,
+                ag: actionArgs
             };
 
             let newDataRef = push(recordEventsRef);

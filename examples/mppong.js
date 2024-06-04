@@ -34,7 +34,7 @@ export const sessionConfig = {
     exitDelayWaitingRoom: 0, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
     maxDurationBelowMinPlayersNeeded: 10, // Number of seconds to continue an active session even though there are fewer than the minimum number of players (if set to zero, session terminates immediately)
     maxHoursSession: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
-    recordData: false // Record all data?  
+    recordData: true // Record all data?  
 };
 export const verbosity = 2;
 
@@ -90,7 +90,8 @@ let ballSpeedY = minBallSpeedInit;
 let oldBallX = ballX;
 let oldBallY = ballY;
 
-
+let delayResetBall = 1000;
+let doResetBall = false;
 
 // -------------------------------------
 //       Graphics handles
@@ -141,11 +142,12 @@ if (useCursorKeys) {
 // -------------------------------------
 
 // Set up correct instructions
-instructionsText.innerHTML = `<p>This game demonstrates how to use the MPLIB library for a two-player pong game. Use the ${ useCursorKeys ? 'cursor keys' : 'mouse'} to move your paddle up and down as well as sideways.</p>`;
+instructionsText.innerHTML = `<p>This game demonstrates how to use the MPLIB library for a two-player pong game. Use the ${ useCursorKeys ? 'cursor keys' : 'mouse'} 
+to move your paddle up and down as well as sideways.</p><p>Open up this link at different browser tabs to simulate different players</p>`;
 
 function gameLoop() {
     // If this client has control, it can update the ball position
-    if (hasControl) {
+    if ((doResetBall==false)) {
         updateBallPosition();
     }
 
@@ -257,8 +259,6 @@ function updateBallPosition() {
     let newBallSpeedX = ballSpeedX;
     let newBallSpeedY = ballSpeedY;
 
-    let doReset = false;
-
     newBallX += newBallSpeedX;
     newBallY += newBallSpeedY;
 
@@ -268,7 +268,9 @@ function updateBallPosition() {
     newBallSpeedX = roundDecimal( newBallSpeedX , 1 );
     newBallSpeedY = roundDecimal( newBallSpeedY , 1 );
 
-    // Check if it hit the paddles
+    let sameTrajectory = true;
+
+    // Check if it hit the paddle of player 1
     if (checkHit( player1X, player1Y, newBallX, newBallY) || 
         doIntersect( player1X+playerWidth,player1Y,player1X+playerWidth,player1Y+playerHeight,  oldBallX,oldBallY,newBallX,newBallY) ||
         inSquare( oldPlayer1X,oldPlayer1Y, player1X+playerWidth,player1Y+playerHeight,newBallX,newBallY)) {
@@ -276,61 +278,87 @@ function updateBallPosition() {
         newBallX = player1X + playerWidth + 1 + ballSize;
         newBallSpeedX = Math.abs( newBallSpeedX ) + player1XSpeed;
         if (newBallSpeedX > maxBallSpeedTot) newBallSpeedX = maxBallSpeedTot;
-
-    } else if (checkHit( player2X, player2Y, newBallX, newBallY) || 
+        sameTrajectory = false;
+    } // Check if it hit the paddle of player 2
+       else if (checkHit( player2X, player2Y, newBallX, newBallY) || 
                doIntersect( player2X,player2Y,player2X,player2Y+playerHeight,  oldBallX,oldBallY,newBallX,newBallY) ||
                inSquare( oldPlayer2X,oldPlayer2Y, player2X+playerWidth,player2Y+playerHeight,newBallX,newBallY))  {
         // Ball hit player 2 paddle
         newBallX = player2X - 1 - ballSize;
         newBallSpeedX = -Math.abs( newBallSpeedX ) - player2XSpeed;
         if (newBallSpeedX < -maxBallSpeedTot) newBallSpeedX = -maxBallSpeedTot;
+        sameTrajectory = false;
     } else
     {
         // Check if it hit the lower or upper walls
         if (newBallY <= 0 || newBallY >= canvasHeight) {
             newBallY -= newBallSpeedY;
             newBallSpeedY = -newBallSpeedY;
+            sameTrajectory = false;
         } else {
             // Check if the ball has passed the left or right side
-            if (newBallX <= 0) {          
-                //directUpdateState( 'hb' , { x: newBallX, y: newBallY, r: Math.random() } );
+            if (newBallX < 0) { 
+                // Send message that backwall was hit
                 directUpdateState( 'hb' , { x: newBallX, y: newBallY } );
 
+                // Update score of player 2
                 let newScore = player2Score + 1;
                 let path = 's2';
                 let newState = { score: newScore };
                 directUpdateState(path, newState);
 
                 // reset ball
-                let np = resetBall();
-                newBallX = np.newX; newBallY = np.newY; newBallSpeedX = np.newSpeedX; newBallSpeedY = np.newSpeedY;
-                doReset = true;
+                doResetBall = true;
+                sameTrajectory = false;
             }
 
-            if (newBallX >= canvasWidth) {
-                //directUpdateState( 'hb' , { x: newBallX, y: newBallY, r: Math.random() } );
+            if (newBallX > canvasWidth) {
+                // Send message that backwall was hit
                 directUpdateState( 'hb' , { x: newBallX, y: newBallY } );
 
+                // Update score of player 1
                 let newScore = player1Score + 1;
                 let path = 's1';
                 let newState = { score: newScore };
                 directUpdateState(path, newState);
+          
+                doResetBall = true;
+                sameTrajectory = false;
+            }
 
-                // reset ball
-                let np = resetBall();
-                newBallX = np.newX; newBallY = np.newY; newBallSpeedX = np.newSpeedX; newBallSpeedY = np.newSpeedY;
-                doReset = true;
+            if ((doResetBall) && (hasControl)) {
+                // Send this new ball position to all players
+                let path = 'b'; let newState = { x: newBallX, y: newBallY, sx: newBallSpeedX, sy: newBallSpeedY, r: doResetBall };
+                directUpdateState(path, newState);
+                
+                setTimeout(function() {
+                    // reset ball
+                    let np = resetBall();
+                    newBallX = np.newX; newBallY = np.newY; newBallSpeedX = np.newSpeedX; newBallSpeedY = np.newSpeedY;
+
+                    // Send this new ball position to all players
+                    doResetBall = false;
+                    let path = 'b'; let newState = { x: newBallX, y: newBallY, sx: newBallSpeedX, sy: newBallSpeedY, r: doResetBall };
+                    directUpdateState(path, newState);
+
+                    
+                }, delayResetBall );
             }
         }
 
     }
 
-    
+    if (doResetBall == false) {
+        // Send this new ball position to all players
+       let path = 'b'; let newState = { x: newBallX, y: newBallY, sx: newBallSpeedX, sy: newBallSpeedY, r: doResetBall };
 
-    // Send this new ball position to all players
-    let path = 'b';
-    let newState = { x: newBallX, y: newBallY, sx: newBallSpeedX, sy: newBallSpeedY, r: doReset };
-    directUpdateState(path, newState);
+       // Update the state with the new ball position. The flag "sametrajectory" is used to skip the saving of the ball position to  
+       // the saved data if the ball is continuing on a straight path. This saves space in the event stream 
+       if (hasControl) directUpdateState(path, newState, sameTrajectory );
+       
+    }
+    
+    
 }
 
 function checkHit( x,y, bx, by) {
@@ -420,7 +448,8 @@ function draw() {
     drawMidline();
     drawRect(player1X, player1Y, playerWidth, playerHeight);
     drawRect(player2X, player2Y, playerWidth, playerHeight);
-    drawBall(ballX, ballY, ballSize);
+
+    if ((ballX > 0) && (ballX < canvasWidth)) drawBall(ballX, ballY, ballSize);
     drawAnimations(); // Draw animations after other elements
 }
 
@@ -510,6 +539,7 @@ export function receiveStateChange( nodeName, state, typeChange ) {
             oldBallX = ballX;
             oldBallY = ballY;
         }
+        doResetBall = state.r;
     } else if (nodeName == 's1') {
         player1Score = state.score;
         document.getElementById("scorePlayer1").textContent = `Player 1: ${player1Score}`;
