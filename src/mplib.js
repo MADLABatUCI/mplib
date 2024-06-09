@@ -392,7 +392,7 @@ window.addEventListener('blur', function () {
 // This function allows for direct changes to a gamestate without checking for conflicts
 // Use these updates to speed up games with continuous movements where players' movements do
 // not conflict with each other
-export function directUpdateState(path, newState, optionalParamSkipRecord = false ) {
+export function updateStateDirect(path, newState, optionalParamSkipRecord = false ) {
     let refNow = ref(db, `${mpg.studyId}/states/${si.sessionId}/${path}`);
     if (newState == null) {
         // If the proposed state is null, use that to remove the node (so we can clean up the gamestate for players who leave the game)
@@ -439,8 +439,8 @@ function recordSessionEvent( si ) {
 }
 
 
-// The gameStateTransaction function uses a transaction to address concurrency issues (i.e., multiple players all making moves at the same time).
-export async function gameStateTransaction(path, action, actionArgs) {
+// The updateStateTransaction function uses a transaction to address concurrency issues (i.e., multiple players all making moves at the same time).
+export async function updateStateTransaction(path, action, actionArgs) {
     let refNow = ref(db, `${mpg.studyId}/states/${si.sessionId}/${path}`);
 
     /* The code below uses the runTranaction function fromthe realtime database SDK that has some unexpected behavior. For example,
@@ -458,7 +458,7 @@ export async function gameStateTransaction(path, action, actionArgs) {
 */
     return runTransaction(refNow, (state) => {
         // Check whether the action is allowed given the current game state
-        const actionResult = mpg.allowedAction(state, action, actionArgs);
+        const actionResult = mpg.allowedUpdate(path, state, action, actionArgs);
         let isAllowed = actionResult.isAllowed;
         let newState = actionResult.newState;
         if (isAllowed) {

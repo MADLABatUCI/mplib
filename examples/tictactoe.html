@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two player Tic-Tac-Toe</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/mplib/examples/general.css">
+    <style>
+        /* Game-specific styles */
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 0px;
+            justify-content: center;
+            margin-top: 50px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            border: 2px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            font-size: 60px;
+            cursor: pointer;
+            color: black;
+        }
+
+        @keyframes pulsate {
+            0% {
+                filter: brightness(1);
+                color: #000;
+            }
+            50% {
+                filter: brightness(2);
+                color: rgb(65, 65, 65);
+            }
+            100% {
+                filter: brightness(1);
+                color: #000;
+            }
+        }
+
+        .textturn {
+            font-size: 1.5em;
+            animation: pulsate 1.5s infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="instructionsScreen">
+        <h1>Instructions</h1>
+        <div class="containertext" id="instructionText">
+        
+        </div>
+        <a href="#" class="button" id="joinBtn">Proceed</a> 
+    </div>
+    <div class="container" id="waitingRoomScreen" style="display:none">
+        <h1>Waiting Room</h1>  
+        <div class="containertext" id="messageWaitingRoom"></div>
+    </div>
+    <div class="container" id="gameScreen" style="display:none; caret-color: transparent;">
+        <h1>Two Player Tic-Tac-Toe</h1>
+        <div class="textturn" id="turnMessage">You are player X: it is your turn</div>
+        <div id="game">
+            <div id="board">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+        </div>
+        <div class="containertext" id="messageGame"></div>
+        <a href="#" class="button" id="leaveBtn">End Session</a> 
+    </div>
+    <div class="container" id="finishScreen" style="display:none">
+        <h1>Completion</h1>  
+        <div class="containertext" id="messageFinish"></div>
+    </div>
+    
+    
+    <script src="/mplib/src/mpconfig.js"></script>
+    <script>
+        // Filename of the game code (needs to match file below)
+        var jsCode = '/mplib/examples/tictactoe.js';
+    </script>
+
+    <script type="module" src="/mplib/src/mplib.js" async></script>
+    <script type="module" src="/mplib/examples/tictactoe.js"></script>
+</body>
+
+</html>

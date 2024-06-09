@@ -15,7 +15,7 @@
 import {
     joinSession,
     leaveSession,
-    directUpdateState,
+    updateStateDirect,
     hasControl
 } from "/mplib/src/mplib.js";
 
@@ -34,7 +34,7 @@ export const sessionConfig = {
     exitDelayWaitingRoom: 0, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
     maxDurationBelowMinPlayersNeeded: 10, // Number of seconds to continue an active session even though there are fewer than the minimum number of players (if set to zero, session terminates immediately)
     maxHoursSession: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
-    recordData: true // Record all data?  
+    recordData: false // Record all data?  
 };
 export const verbosity = 2;
 
@@ -207,7 +207,7 @@ function movePlayerMouse(e) {
 
     // Send this new player position to firebase
     let newState = { x: newPlayerX, y: newPlayerY };
-    directUpdateState(path, newState);
+    updateStateDirect(path, newState);
 }
 
 
@@ -246,7 +246,7 @@ function movePlayerCursorKeys(e) {
 
     // Send this new player position to firebase
     let newState = { x: newPlayerX, y: newPlayerY };
-    directUpdateState(path, newState);
+    updateStateDirect(path, newState);
 }
 
 
@@ -299,13 +299,13 @@ function updateBallPosition() {
             // Check if the ball has passed the left or right side
             if (newBallX < 0) { 
                 // Send message that backwall was hit
-                directUpdateState( 'hb' , { x: newBallX, y: newBallY } );
+                updateStateDirect( 'hb' , { x: newBallX, y: newBallY } );
 
                 // Update score of player 2
                 let newScore = player2Score + 1;
                 let path = 's2';
                 let newState = { score: newScore };
-                directUpdateState(path, newState);
+                updateStateDirect(path, newState);
 
                 // reset ball
                 doResetBall = true;
@@ -314,13 +314,13 @@ function updateBallPosition() {
 
             if (newBallX > canvasWidth) {
                 // Send message that backwall was hit
-                directUpdateState( 'hb' , { x: newBallX, y: newBallY } );
+                updateStateDirect( 'hb' , { x: newBallX, y: newBallY } );
 
                 // Update score of player 1
                 let newScore = player1Score + 1;
                 let path = 's1';
                 let newState = { score: newScore };
-                directUpdateState(path, newState);
+                updateStateDirect(path, newState);
           
                 doResetBall = true;
                 sameTrajectory = false;
@@ -329,7 +329,7 @@ function updateBallPosition() {
             if ((doResetBall) && (hasControl)) {
                 // Send this new ball position to all players
                 let path = 'b'; let newState = { x: newBallX, y: newBallY, sx: newBallSpeedX, sy: newBallSpeedY, r: doResetBall };
-                directUpdateState(path, newState);
+                updateStateDirect(path, newState);
                 
                 setTimeout(function() {
                     // reset ball
@@ -339,7 +339,7 @@ function updateBallPosition() {
                     // Send this new ball position to all players
                     doResetBall = false;
                     let path = 'b'; let newState = { x: newBallX, y: newBallY, sx: newBallSpeedX, sy: newBallSpeedY, r: doResetBall };
-                    directUpdateState(path, newState);
+                    updateStateDirect(path, newState);
 
                     
                 }, delayResetBall );
@@ -354,7 +354,7 @@ function updateBallPosition() {
 
        // Update the state with the new ball position. The flag "sametrajectory" is used to skip the saving of the ball position to  
        // the saved data if the ball is continuing on a straight path. This saves space in the event stream 
-       if (hasControl) directUpdateState(path, newState, sameTrajectory );
+       if (hasControl) updateStateDirect(path, newState, sameTrajectory );
        
     }
     
@@ -597,7 +597,7 @@ export function startSession(sessionInfo) {
     myconsolelog( str );
 
     let str2 = `<p>Number of players: ${ sessionInfo.numPlayers} Session ID: ${ sessionInfo.sessionId}$</p>`;
-    messageGame.innerHTML = str2;
+    //messageGame.innerHTML = str2;
 
     document.getElementById(`labelPlayer${arrivalIndex}`).textContent = `(You)`;
 
@@ -612,7 +612,7 @@ export function updateSession(sessionInfo) {
     myconsolelog( str );
 
     let str2 = `<p>Number of players: ${ sessionInfo.numPlayers} Session ID: ${ sessionInfo.sessionId}$</p>`;
-    messageGame.innerHTML = str2;
+    //messageGame.innerHTML = str2;
 }
 
 export function endSession( sessionInfo ) {
