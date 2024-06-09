@@ -41,9 +41,9 @@ export let hasControl = false;
 
 let initSession = false; // determines whether a session has be initiated 
 let sessionStarted = false;
-let StateRef;
+let stateRef;
 let presenceRef, connectedRef;
-let sessionsRef, sessionsDataRef, recordEventsRef;
+let sessionsRef, sessionsDataRef, recordEventsRef, recordPlayerRef;
 let offsetRef;
 let serverTimeOffset = 0; // default
 let numPlayersBefore = 0;
@@ -79,6 +79,7 @@ await onAuthStateChanged(auth, (user) => {
         // this facilitates testing of code on the same computer across different browser windows
         //si.playerId = user.uid;
         si.playerId = generateId();
+        //si.urlParams = getUrlParameters(); // add URL params in the sessionInfo
 
         // Once the main game code is loaded...
         loadModule().then(result => {
@@ -297,7 +298,7 @@ export async function leaveSession() {
         off(connectedRef);
 
         // remove the listener for game state
-        off(StateRef);
+        off(stateRef);
     });
 
     
@@ -307,16 +308,21 @@ export async function leaveSession() {
 // Function to start an active session (e.g. coming out of a waiting room, or when a single player can start a session)
 function startSession() {
     // Create a path to store the game state
-    StateRef = ref(db, `${mpg.studyId}/states/${si.sessionId}/`);
+    stateRef = ref(db, `${mpg.studyId}/states/${si.sessionId}/`);
 
-    // Create a path to store all recorded gamestates   
+    // Create a path to store all recorded events related to state changes 
     recordEventsRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/events/`);
+
+    // Create a path to store all recorded player level information
+    recordPlayerRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);
+    recordPlayerData( 'urlparams', getUrlParameters() );
+    recordPlayerData( 'sessionInfo' , si );
 
     const listenerModel = 'childChanges';
 
     if (listenerModel == 'childChanges') {
         // Create a listener for changes in the state 
-        onChildChanged(StateRef, (snapshot) => {
+        onChildChanged(stateRef, (snapshot) => {
             const nodeName = snapshot.key;
             const state = snapshot.val();
             if (state != null) {
@@ -325,9 +331,10 @@ function startSession() {
             }
         });
     } else {
-        // NOT TESTED YET !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        error( 'Not tested yet');
         // Create a listener for any change in the state 
-        onValue(StateRef, (snapshot) => {
+        /*
+        onValue(stateRef, (snapshot) => {
             const nodeName = snapshot.key;
             const state = snapshot.val();
             if (state != null) {
@@ -335,11 +342,12 @@ function startSession() {
                 mpg.receiveStateChange(nodeName, state, 'onValue');
             }
         });
+        */
     }
     
 
     // Create a listener for additions to the gamestate
-    onChildAdded(StateRef, (snapshot) => {
+    onChildAdded(stateRef, (snapshot) => {
         const nodeName = snapshot.key;
         const state = snapshot.val();
         if (state != null) {
@@ -349,7 +357,7 @@ function startSession() {
     });
 
     // Create a listener for additions to the gamestate
-    onChildRemoved(StateRef, (snapshot) => {
+    onChildRemoved(stateRef, (snapshot) => {
         const nodeName = snapshot.key;
         const state = snapshot.val();
         if (state != null) {
@@ -367,7 +375,7 @@ window.addEventListener('beforeunload', function (event) {
     if (initSession) {
         // Only remove this player when the session started
         sessionUpdate('remove', si.playerId);
-        mpg.removePlayerGameState(si.playerId);
+        //mpg.removePlayerGameState(si.playerId);
     }
 });
 
@@ -438,6 +446,16 @@ function recordSessionEvent( si ) {
     } 
 }
 
+function recordPlayerData( field, value ) {
+    // Are we recording the data?
+    if (mpg.sessionConfig.recordData) {
+        let returnResult = {
+            [field]: value,
+        };    
+        //let newDataRef = push(recordPlayerRef);
+        update(recordPlayerRef, returnResult);
+    } 
+}
 
 // The updateStateTransaction function uses a transaction to address concurrency issues (i.e., multiple players all making moves at the same time).
 export async function updateStateTransaction(path, action, actionArgs) {
@@ -478,22 +496,22 @@ export async function updateStateTransaction(path, action, actionArgs) {
             myconsolelog(`Transaction failed: ${action} ${actionArgs}`);
         } else {
             myconsolelog(`Transaction successful: ${action} ${actionArgs}`);
-        }
 
-        // Are we recording the data?
-        if ((mpg.sessionConfig.recordData) && (isSuccess)) {
-            let newState = result.snapshot.val();
-            let returnResult = {
-                s: newState,
-                t: serverTimestamp(),
-                pId: si.playerId,
-                p: path,
-                a: action,
-                ag: actionArgs
-            };
+            // Are we recording the data?
+            if (mpg.sessionConfig.recordData) {
+                let newState = result.snapshot.val();
+                let returnResult = {
+                    s: newState,
+                    t: serverTimestamp(),
+                    pId: si.playerId,
+                    p: path,
+                    a: action,
+                    args: actionArgs
+                };
 
-            let newDataRef = push(recordEventsRef);
-            set(newDataRef, returnResult);
+                let newDataRef = push(recordEventsRef);
+                set(newDataRef, returnResult);
+            }
         }
 
         return isSuccess;
@@ -531,6 +549,11 @@ async function sessionUpdate(action, thisPlayer) {
                     let numP = Object.keys(currentState[sessionIdThis].players).length;
                     if (numP == 0) {
                         delete currentState[sessionIdThis];
+
+                        
+                        off(stateRef); // remove the listener for game state
+                        remove( stateRef ); // delete the state
+
                     } else if ((mpg.sessionConfig.allowReplacements) && ((mpg.sessionConfig.maxHoursSession === 0) || (hoursElapsed < mpg.sessionConfig.maxHoursSession))) {
                         // If replacemens are allowed for session and there is time remaining to add players ....
                         // Check if we can move a waiting person to move into this session.....

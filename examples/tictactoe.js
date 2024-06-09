@@ -310,6 +310,7 @@ export function updateSession(sessionInfo) {
         gameScreen.style.display = 'none';
         finishScreen.style.display = 'block';
         messageFinish.innerHTML = `<p>The other player has left the session.</p>`;
+        leaveSession();
     }
 }
 
