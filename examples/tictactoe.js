@@ -40,10 +40,9 @@ updateConfigFromUrl( sessionConfig );
 // -------------------------------------
 //       Globals
 // -------------------------------------
-// Initialize game state
 let gameState;
 let thisSession;
-let emptyPlace = ' ';
+let emptyPlace = ' '; // this character represents the absence of a token and a lack of a winner (it is tempting to use "null" for this state, but firebase does not store any null variables and this can complicate the coding)
 let delayStartNewGame = 3000;
 
 // -------------------------------------
@@ -95,43 +94,34 @@ cells.forEach(cell => {
 //      Game logic and UI
 // -------------------------------------
 
-function startGame() {
-    // Initialize a game
-    let whoStarts = Math.random() < 0.5 ? 'X' : 'O';
-    let newState = {
-        board: Array(9).fill(emptyPlace),
-        currentPlayer: whoStarts, // who is starting this turn?
-        playerStarted: whoStarts, // who started this game?
-        firstArrival: Math.random() < 0.5 ? 'X' : 'O', // which players is assigned "X" and "O"
-        winner: emptyPlace,
-    };
-
-    // Each player will attempt to initialize the game but only the first player (client) to 
-    // run this transaction will be able to initialize the state. We place the game state under the node 'state'
-    // as this will broadcast the entire gamestate to players (including /board, /currentPlayer, etc) 
-    updateStateTransaction( 'state' , 'initialize' , newState ).then(success => {
-        // Note that updates to the game state are not done in this conditional statement. If the transaction
-        // is successful, the state will be broadcast to all players and the "receiveUpdate" function can be
-        // used to update the local game state
-        if (!success) {
-            console.log( 'The game was already initialized');
-        } else {
-            console.log( 'The game is initialized by this player');
-        }
-    });
-}
-
 function newGame() {
     // Initialize a game
-    let whoStarts = gameState.playerStarted === 'O' ? 'X' : 'O'; // the player who didn't start last game now starts
-    let newState = {
-        board: Array(9).fill(emptyPlace),
-        currentPlayer: whoStarts, // who is starting this turn?
-        playerStarted: whoStarts, // who started this game?
-        firstArrival: gameState.firstArrival, // keep the assignments of players to "X" and "O" tokens
-        winner: emptyPlace,
-    };
+    let whoStarts;
+    let newState;
 
+    // If we have an existing game, we go to the next round
+    if (gameState) {
+        whoStarts = gameState.playerStarted === 'O' ? 'X' : 'O'; // the player who didn't start last game now starts
+        newState = {
+            board: Array(9).fill(emptyPlace),
+            currentPlayer: whoStarts, // who is starting this turn?
+            playerStarted: whoStarts, // who started this game?
+            firstArrival: gameState.firstArrival, // keep the assignments of first-arrived player
+            winner: emptyPlace,
+            round: gameState.round + 1
+        };
+    } else {  // Otherwise, we start from scratch
+        whoStarts = Math.random() < 0.5 ? 'X' : 'O'; // randomly assign whether "X" or "O" starts
+        newState = {
+            board: Array(9).fill(emptyPlace),
+            currentPlayer: whoStarts, // who is starting this turn?
+            playerStarted: whoStarts, // who started this game?
+            firstArrival: Math.random() < 0.5 ? 'X' : 'O', // The assignment of the player who arrived first in the session
+            winner: emptyPlace,
+            round: 1
+        };
+    }
+    
     // Each player will attempt to initialize the game but only the first player (client) to 
     // run this transaction will be able to initialize the state. We place the game state under the node 'state'
     // as this will broadcast the entire gamestate to players (including /board, /currentPlayer, etc) 
@@ -214,7 +204,7 @@ export function receiveStateChange(nodeName, newState, typeChange ) {
 }
 
 
-export function allowedUpdate( path, state, action, actionArgs ) {
+export function evaluateUpdate( path, state, action, actionArgs ) {
     let isAllowed = false;
     let newState = null;
 
@@ -301,7 +291,7 @@ export function startSession(sessionInfo) {
     //messageGame.innerHTML = str2;
 
     thisSession = sessionInfo;
-    startGame();
+    newGame();
 }
 
 // This callback function is triggered when session is active, but number of players changes

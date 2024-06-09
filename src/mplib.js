@@ -458,7 +458,7 @@ export async function updateStateTransaction(path, action, actionArgs) {
 */
     return runTransaction(refNow, (state) => {
         // Check whether the action is allowed given the current game state
-        const actionResult = mpg.allowedUpdate(path, state, action, actionArgs);
+        const actionResult = mpg.evaluateUpdate(path, state, action, actionArgs);
         let isAllowed = actionResult.isAllowed;
         let newState = actionResult.newState;
         if (isAllowed) {
