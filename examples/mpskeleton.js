@@ -12,7 +12,8 @@
 import {
     joinSession,
     leaveSession,
-    updateStateDirect, 
+    updateStateDirect,
+    updateStateTransaction,  
     hasControl
 } from "/mplib/src/mplib.js";
 
@@ -84,6 +85,8 @@ export function receiveStateChange(nodeName, newState, typeChange ) {
 }
 
 // Function triggered by a call to "updateStateTransaction" to evaluate if the proposed action is valid
+// If "updateStateTransaction" is not called, and all updates are done through "updateStateDirect", there is no 
+// need for this function
 export function evaluateUpdate( path, state, action, actionArgs ) {
     let isAllowed = false;
     let newState = null;
