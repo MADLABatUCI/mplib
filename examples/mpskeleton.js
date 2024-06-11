@@ -12,16 +12,17 @@
 import {
     joinSession,
     leaveSession,
-    directUpdateState, 
+    updateStateDirect, 
     hasControl
 } from "/mplib/src/mplib.js";
 
 
 // -------------------------------------
-//       Game configuration
+//       Session configuration
 // -------------------------------------
-// studyId is the name of the root node we create in the database
+// studyId is the name of the root node we create in the realtime database
 export const studyId = 'testmplib'; 
+
 // Configuration setting for the session
 export const sessionConfig = {
     minPlayersNeeded: 1, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
@@ -70,7 +71,31 @@ leaveButton.addEventListener('click', function () {
 });
 
 // --------------------------------------------------------------------------------------
-//   Handle Events triggered by MPLIB
+//   Handle waiting room and session events triggered by MPLIB
+// --------------------------------------------------------------------------------------
+
+// Function to receive state changes from Firebase (broadcast by other players)
+export function receiveStateChange(nodeName, newState, typeChange ) {
+    // typeChange can be the following:
+    //  'onChildChanged'
+    //  'onChildAdded'
+    //  'onChildRemoved'
+
+}
+
+// Function triggered by a call to "updateStateTransaction" to evaluate if the proposed action is valid
+export function evaluateUpdate( path, state, action, actionArgs ) {
+    let isAllowed = false;
+    let newState = null;
+
+    // .... insert your code to update isAllowed and newState
+
+    let evaluationResult = { isAllowed, newState };
+    return evaluationResult;
+}
+
+// --------------------------------------------------------------------------------------
+//   Handle waiting room and session events triggered by MPLIB
 //   These callback functions are required, but the contents can be empty and left inconsequential  
 //   (note: all timestamps are server-side expressed in milliseconds since the Unix Epoch)
 // --------------------------------------------------------------------------------------
