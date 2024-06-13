@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Demonstration of a virtual world with MPLIB</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/protyze/aframe-gltf-entity-component/dist/aframe-gltf-entity-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script> 
+
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/mplib/examples/general.css">
+
+    <style>
+        body {
+          
+        }
+        #aframe-scene {
+          
+        }
+        .uiContainer {
+          caret-color: transparent;
+          position: absolute;
+          top: 0;
+          left: 0;
+          z-index: 1;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background-color: none;
+        }
+        .button {
+          min-width: fit-content;
+        }
+        
+
+      </style>
+  </head>
+  <body>
+    <div class="container" id="instructionsScreen" >
+        <h1>Instructions</h1>
+        <div class="containertext" id="instructionText">
+        <p> 
+        This demonstration shows how multiple people can appear simulteneously in a 3D virtual world that can be viewed on a desktop as well as VR devices. Each participant
+        appears as an avatar in the scene. On a desktop, use the mouse and cursor keys to move around the scene. 
+        </p> 
+        </div>
+        <a href="#" class="button" id="joinBtn">Proceed</a> 
+    </div>
+    <div class="container" id="waitingRoomScreen" style="display:none">
+        <h1>Waiting Room</h1>  
+        <div class="containertext" id="messageWaitingRoom"></div>
+    </div>
+
+    <!--
+    <div class="container" id="gameScreen" style="display:none">
+        <h1>Virtual World</h1>
+        <div class="containertext" id="messageGame"></div>
+    -->
+
+    <div id="gameScreen" ></div>
+         
+        <a-scene id="aframe-scene" style="display:none;">
+          
+            <!-- Load assetts -->
+          <a-assets>
+            <img id="tileTexture" src="/mplib/test/tile-pattern.jpg">
+            <a-asset-item id="characterModel" src="/mplib/test/CharacterAnimated.glb"></a-asset-item>
+          </a-assets>
+    
+          <!--
+          <a-entity id="camera" camera look-controls wasd-controls cursor position="0 1.6 5"></a-entity>
+          -->
+          
+          <!-- Adding the 3D model of a person -->
+          <a-entity gltf-model="#characterModel" position="-3 0 -1.5" id="person1" scale="0.75 0.75 0.75"></a-entity>
+          <a-entity gltf-model="#characterModel" position="3 0 -1.5" id="person2" scale="0.75 0.75 0.75"></a-entity>
+    
+          <!-- Plane with the tiled texture -->
+          <a-plane 
+            position="0 0 0" 
+            rotation="-90 0 0" 
+            width="20" 
+            height="20" 
+            material="src: #tileTexture; repeat: 20 20;">
+          </a-plane>
+          
+          <a-box position="0 1 -5" rotation="0 45 0" color="#4CC3D9"></a-box>
+          <a-sphere position="1 1.25 -3" radius="1.25" color="#EF2D5E"></a-sphere>
+          <a-cylinder position="0.5 0.75 -2" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+          <a-sky color="#ECECEC"></a-sky>
+    
+          
+          <a-camera  id="camera" look-controls wasd-controls="enabled: false" position="0 1.6 5">
+            <a-cursor></a-cursor>
+          </a-camera>
+    
+          <a-entity id="characterText">
+            <a-plane id="characterTextBackground" color="#100000" opacity="0.2" width="2" height="0.5" position="0 2 -1" visible="false"  look-at="#camera"></a-plane>
+            <a-text id="characterName" value="" position="0 2 -1" align="center" color="black" visible="false"  look-at="#camera"></a-text>
+          </a-entity>
+    
+          
+        </a-scene>
+        <div class="uiContainer" >
+            <div class="containertext" id="messageGame"></div>
+            <a href="#" class="button" id="leaveBtn" style="display:none">End Session</a> 
+                
+        </div>
+        
+    </div>
+    
+
+    <div class="container" id="finishScreen" style="display:none">
+        <h1>Completion</h1>  
+        <div class="containertext" id="messageFinish"></div>
+    </div>
+    
+    
+    <script src="/mplib/src/mpconfig.js"></script>
+    <script>
+        // Filename of the game code (needs to match file below)
+        var jsCode = '/mplib/examples/virtualworld.js';
+    </script>
+
+    <script type="module" src="/mplib/src/mplib.js" async></script>
+    <script type="module" src="/mplib/examples/virtualworld.js"></script>
+
+
+    
+      
+    </script>
+  </body>
+</html>

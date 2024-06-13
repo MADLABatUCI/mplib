@@ -1,9 +1,13 @@
+
 // --------------------------------------------------------------------------------------
-//    Skeleton code to demonstrate how MPLIB can be used to program a waiting room
-//    and a game room (without any game). Both the waiting and game room display
-//    the number of players currently waiting or playing 
+//    Code to demonstrate how MPLIB can be used for a multiplayer virtual world 
 // --------------------------------------------------------------------------------------
 
+
+// to do
+// disable WASD functionality and just program own cursor key controls
+
+// more interesting plane - create a single rounded square with a margin. Then tile
 
 // -------------------------------------
 // Importing functions and variables from 
@@ -22,12 +26,12 @@ import {
 //       Session configuration
 // -------------------------------------
 // studyId is the name of the root node we create in the realtime database
-export const studyId = 'testmplib'; 
+export const studyId = 'virtualworld'; 
 
 // Configuration setting for the session
 export const sessionConfig = {
-    minPlayersNeeded: 2, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
-    maxPlayersNeeded: 3, // Maximum number of players allowed in a session
+    minPlayersNeeded: 1, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
+    maxPlayersNeeded: 10, // Maximum number of players allowed in a session
     maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
     allowReplacements: true, // Allow replacing any players who leave an ongoing session?
     exitDelayWaitingRoom: 0, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
@@ -54,6 +58,19 @@ let gameScreen = document.getElementById('gameScreen');
 let messageWaitingRoom = document.getElementById('messageWaitingRoom');
 let messageGame = document.getElementById('messageGame');
 let messageFinish = document.getElementById('messageFinish');
+
+let cameraEl = document.querySelector('#camera');
+let characterNameEl = document.querySelector('#characterName');
+let characterTextBackgroundEl = document.querySelector('#characterTextBackground');
+
+let scene = document.querySelector('a-scene');
+
+
+if (scene.hasLoaded) {
+    showInstructions();
+  } else {
+    scene.addEventListener('loaded', showInstructions);
+  }
 
 // -------------------------------------
 //       Event Listeners
@@ -97,6 +114,145 @@ export function evaluateUpdate( path, state, action, actionArgs ) {
     return evaluationResult;
 }
 
+
+//document.addEventListener('DOMContentLoaded', function () {
+    
+// --------------------------------------------------------------------------------------
+//   Virtual world code using A-frame
+// --------------------------------------------------------------------------------------
+
+function showCharacterName(event) {
+    var name = event.target.getAttribute('id');
+    var position = event.target.getAttribute('position');
+    characterNameEl.setAttribute('value', name);
+    var textPosition = { x: position.x, y: position.y + 2.5, z: position.z };
+    characterNameEl.setAttribute('position', textPosition);
+    characterNameEl.setAttribute('visible', 'true');
+    characterTextBackgroundEl.setAttribute('position', textPosition);
+    characterTextBackgroundEl.setAttribute('visible', 'true');
+}
+
+function hideCharacterName() {
+    characterNameEl.setAttribute('visible', 'false');
+    characterTextBackgroundEl.setAttribute('visible', 'false');
+}
+
+var characters = document.querySelectorAll('[gltf-model]');
+
+characters.forEach(function(character) {
+    character.addEventListener('mouseenter', showCharacterName);
+    character.addEventListener('mouseleave', hideCharacterName);
+});
+
+var previousPosition = new AFRAME.THREE.Vector3();
+var previousRotation = new AFRAME.THREE.Euler();
+
+document.addEventListener('keydown', function(event) {
+    switch(event.code) {
+        case 'ArrowUp':
+            moveCamera('forward');
+            break;
+        case 'ArrowDown':
+            moveCamera('backward');
+            break;
+        case 'ArrowLeft':
+            moveCamera('left');
+            break;
+        case 'ArrowRight':
+            moveCamera('right');
+            break;
+    }
+});
+
+function moveCamera(direction) {
+    var cameraPosition = cameraEl.object3D.position;
+    var cameraRotation = cameraEl.object3D.rotation;
+
+    var moveDistance = 0.1;
+    var moveVector = new THREE.Vector3();
+
+    if (direction === 'forward') {
+        moveVector.setFromMatrixColumn(cameraEl.object3D.matrix, 0);
+        moveVector.crossVectors(cameraEl.object3D.up, moveVector);
+        cameraPosition.add(moveVector.multiplyScalar(moveDistance));
+    } else if (direction === 'backward') {
+        moveVector.setFromMatrixColumn(cameraEl.object3D.matrix, 0);
+        moveVector.crossVectors(cameraEl.object3D.up, moveVector);
+        cameraPosition.add(moveVector.multiplyScalar(-moveDistance));
+    } else if (direction === 'left') {
+        moveVector.setFromMatrixColumn(cameraEl.object3D.matrix, 0);
+        cameraPosition.add(moveVector.multiplyScalar(-moveDistance));
+    } else if (direction === 'right') {
+        moveVector.setFromMatrixColumn(cameraEl.object3D.matrix, 0);
+        cameraPosition.add(moveVector.multiplyScalar(moveDistance));
+    }
+
+    let climits = {
+        minX: -10,
+        maxX: 10,
+        minY: 1.6,
+        maxY: 1.7,
+        minZ: -10,
+        maxZ: 10
+    };
+
+    cameraPosition.x = Math.min(Math.max(cameraPosition.x, climits.minX), climits.maxX);
+    cameraPosition.y = Math.min(Math.max(cameraPosition.y, climits.minY), climits.maxY);
+    cameraPosition.z = Math.min(Math.max(cameraPosition.z, climits.minZ), climits.maxZ);
+    cameraEl.setAttribute('position', cameraPosition);
+
+    if (!cameraPosition.equals(previousPosition) || !cameraRotation.equals(previousRotation)) {
+        console.log(`Camera Position: x=${cameraPosition.x.toFixed(1)}, y=${cameraPosition.y.toFixed(1)}, z=${cameraPosition.z.toFixed(1)} Rotation: x=${(cameraRotation.x * (180 / Math.PI)).toFixed(1)}, y=${(cameraRotation.y * (180 / Math.PI)).toFixed(1)}, z=${(cameraRotation.z * (180 / Math.PI)).toFixed(1)}`);
+
+        previousPosition.copy(cameraPosition);
+        previousRotation.copy(cameraRotation);
+
+        requestAnimationFrame(tick);
+    }
+}
+
+
+function tick() {
+    requestAnimationFrame(tick);
+}
+
+/*
+tick();
+
+
+function tick() {
+    var cameraPosition = cameraEl.object3D.position;
+    var cameraRotation = cameraEl.object3D.rotation;
+
+    let climits = {
+    minX: -10,
+    maxX: 10,
+    minY: 1.6,
+    maxY: 1.7,
+    minZ: -10,
+    maxZ: 10
+    };
+
+    cameraPosition.x = Math.min(Math.max(cameraPosition.x, climits.minX), climits.maxX);
+    cameraPosition.y = Math.min(Math.max(cameraPosition.y, climits.minY), climits.maxY);
+    cameraPosition.z = Math.min(Math.max(cameraPosition.z, climits.minZ), climits.maxZ);
+    cameraEl.setAttribute('position', cameraPosition);
+    
+    if (!cameraPosition.equals(previousPosition) || !cameraRotation.equals(previousRotation)) {
+    console.log(`Camera Position: x=${cameraPosition.x.toFixed(1)}, y=${cameraPosition.y.toFixed(1)}, z=${cameraPosition.z.toFixed(1)} Rotation: x=${(cameraRotation.x * (180 / Math.PI)).toFixed(1)}, y=${(cameraRotation.y * (180 / Math.PI)).toFixed(1)}, z=${(cameraRotation.z * (180 / Math.PI)).toFixed(1)}`);
+
+    previousPosition.copy(cameraPosition);
+    previousRotation.copy(cameraRotation);
+    }
+    
+    requestAnimationFrame(tick);
+}
+*/
+    
+function showInstructions() {
+    instructionsScreen.style.display = 'block';
+}
+  
 // --------------------------------------------------------------------------------------
 //   Handle waiting room and session events triggered by MPLIB
 //   These callback functions are required, but the contents can be empty and left inconsequential  
@@ -135,13 +291,20 @@ export function startSession(sessionInfo) {
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
+
+    scene.style.visibility = 'visible';
+    scene.style.display = 'block';
+
+    leaveButton.style.display = 'block';
     
     let dateString = timeStr(sessionInfo.sessionStartedAt);
     let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
     myconsolelog( str );
 
     let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    messageGame.innerHTML = str2;
+    //messageGame.innerHTML = str2;
+
+    tick();
 }
 
 // This callback function is triggered when session is active, but number of players changes
@@ -151,7 +314,7 @@ export function updateSession(sessionInfo) {
     myconsolelog( str );
 
     let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    messageGame.innerHTML = str2;
+    //messageGame.innerHTML = str2;
 }
 
 export function endSession( sessionInfo ) {
@@ -159,6 +322,11 @@ export function endSession( sessionInfo ) {
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'none';
     finishScreen.style.display = 'block';
+
+    scene.style.visibility = 'hidden';
+    scene.style.display = 'none';
+
+    leaveButton.style.display = 'none';
 
     if (sessionInfo.sessionErrorCode != 0) {
         messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
@@ -231,4 +399,4 @@ function updateConfigFromUrl( sessionConfig ) {
             myconsolelog( `URL parameters update session parameter ${key} to value ${newValue}`);
         }
     }
-}
+}  

@@ -7,6 +7,7 @@
 test/
 src/notes.md
 .vscode/
+.gitignore
 
 # User-specific files
 *.rsuser
