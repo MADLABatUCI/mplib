@@ -207,7 +207,7 @@ function moveCamera(direction) {
         previousPosition.copy(cameraPosition);
         previousRotation.copy(cameraRotation);
 
-        requestAnimationFrame(tick);
+        //requestAnimationFrame(tick);
     }
 }
 
