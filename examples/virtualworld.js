@@ -41,6 +41,9 @@ updateConfigFromUrl( sessionConfig );
 // -------------------------------------
 //       Globals
 // -------------------------------------
+let moveDistance = 0.04; // step distance
+let rotationAmount = 0.02; // Adjust the rotation speed as needed
+
 let cameraHeight = 1.6; // camera height
 let angleOffset = 135; // angle needed for character to face in direction camera is looking 
 let newScale = { x: 0.75, y: 0.75, z: 0.75 };
@@ -112,7 +115,7 @@ export function receiveStateChange(nodeName, newState, typeChange ) {
     if (nodeName.startsWith("Player")) { // do we a player change?
         if (typeChange == 'onChildChanged') {
             if (nodeName != id) {
-                updateCharacter( nodeName, newState.position, newState.rotation);
+                updateCharacter( nodeName, newState.position, newState.rotation, newState.direction );
             } else {
                 setCamera( newState.position, newState.rotation );
             }
@@ -121,7 +124,7 @@ export function receiveStateChange(nodeName, newState, typeChange ) {
             if (nodeName != id) { 
                 // we only add characters for other players. The player for this client has a first person perspective 
                 // and does see itself
-                addCharacter( nodeName, newState.position, newState.rotation );                
+                addCharacter( nodeName, newState.position, newState.rotation, newState.direction );                
             } else {
                 setCamera( newState.position, newState.rotation );
             }
@@ -161,14 +164,50 @@ function addSelf( arrivalIndex ) {
     // Calculate rotation to face the origin
     let dx = position.x;
     let dz = position.z;
-    let rotationY = Math.atan2(dz, dx) * (180 / Math.PI); // Convert to degrees
-    let rotation = { x: 0, y: rotationY + 90, z: 0 }; // Adjust rotation to face the origin
+    let rotationY = Math.atan2(dz, dx); // Radians
+    let rotation = { x: 0, y: rotationY + 1.5 * Math.PI , z: 0 }; // Adjust rotation to face the origin
+
+    let direction = 'idle';
 
     // Send this new player position to firebase
-    let newState = { position, rotation };
+    let newState = { position, rotation, direction };
     updateStateDirect( id, newState);
 } 
 
+let updateTimeouts = {};
+
+function updateCharacter(id, position, rotation, direction ) {
+    let character = document.querySelector(`#${id}`);
+    if (character) {
+        character.setAttribute('position', `${position.x} ${position.y - cameraHeight} ${position.z}`);
+        character.object3D.rotation.x = rotation.x;
+        character.object3D.rotation.y = rotation.y - angleOffset;
+        character.object3D.rotation.z = rotation.z;
+
+        if (direction=='backward') {
+            character.object3D.rotation.y += Math.PI; 
+        }
+
+        if ((direction=='forward') || (direction=='backward')) {
+            character.setAttribute('animation-mixer', 'clip: Walk');
+
+            // Clear any existing timeout for this character
+            if (updateTimeouts[id]) {
+                clearTimeout(updateTimeouts[id]);
+            }
+
+            // Set a new timeout to change the animation to "Idle" after 0.2 seconds
+            updateTimeouts[id] = setTimeout(() => {
+                character.setAttribute('animation-mixer', 'clip: Idle');
+            }, 200);
+        }
+        
+    } else {
+        console.error(`Character with id ${id} not found`);
+    }
+}
+
+/*
 function updateCharacter(id, position, rotation) {
     let character = document.querySelector(`#${id}`);
     if (character) {
@@ -176,14 +215,15 @@ function updateCharacter(id, position, rotation) {
         character.object3D.rotation.x = rotation.x;
         character.object3D.rotation.y = rotation.y - angleOffset;
         character.object3D.rotation.z = rotation.z;
+        character.setAttribute('animation-mixer', 'clip: Walk');
         //character.setAttribute('rotation', `${rotation.x} ${rotation.y + 180} ${rotation.z}`);
     } else {
         console.error(`Character with id ${id} not found`);
     }
 }
+*/
 
 function addCharacter(id, newPosition, newRotation  ) {
-    
     newPosition.y -= cameraHeight;
 
     let newCharacter = document.createElement('a-entity');
@@ -252,7 +292,6 @@ function moveCamera(direction) {
     let cameraPosition = cameraEl.object3D.position;
     let cameraRotation = cameraEl.object3D.rotation;
 
-    let moveDistance = 0.1;
     let moveVector = new THREE.Vector3();
 
     if (direction === 'forward') {
@@ -271,14 +310,15 @@ function moveCamera(direction) {
     cameraPosition.z = Math.min(Math.max(cameraPosition.z, climits.minZ), climits.maxZ);
 
     // Send this new player position to firebase
-    let newState = { position: { x:cameraPosition.x,y:cameraPosition.y,z:cameraPosition.z }, rotation: { x:cameraRotation.x,y:cameraRotation.y,z:cameraRotation.z }};
+    let newState = { position: { x:cameraPosition.x,y:cameraPosition.y,z:cameraPosition.z }, rotation: { x:cameraRotation.x,y:cameraRotation.y,z:cameraRotation.z },
+                     direction };
     updateStateDirect( id, newState);
 }
 
 function rotateCamera(direction) {
     let cameraPosition = cameraEl.object3D.position;
     let cameraRotation = cameraEl.object3D.rotation;
-    let rotationAmount = 0.02; // Adjust the rotation speed as needed
+    
 
     if (direction === 'left') {
         cameraRotation.y += rotationAmount;
@@ -287,7 +327,8 @@ function rotateCamera(direction) {
     }
 
     // Send this new player position to firebase
-    let newState = { position: { x:cameraPosition.x,y:cameraPosition.y,z:cameraPosition.z }, rotation: { x:cameraRotation.x,y:cameraRotation.y,z:cameraRotation.z }};
+    let newState = { position: { x:cameraPosition.x,y:cameraPosition.y,z:cameraPosition.z }, rotation: { x:cameraRotation.x,y:cameraRotation.y,z:cameraRotation.z },
+                     direction };
     updateStateDirect( id, newState);
 }
 
