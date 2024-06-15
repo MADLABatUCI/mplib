@@ -195,6 +195,10 @@ function addCharacter(id, newPosition, newRotation  ) {
     newCharacter.object3D.rotation.x = newRotation.x;
     newCharacter.object3D.rotation.y = newRotation.y - angleOffset;
     newCharacter.object3D.rotation.z = newRotation.z;
+
+    //newCharacter.setAttribute('animation-mixer', 'clip: Walk');
+    newCharacter.setAttribute('animation-mixer', 'clip: Idle');
+
     newCharacter.addEventListener('mouseenter', showCharacterName);
     newCharacter.addEventListener('mouseleave', hideCharacterName);
     scene.appendChild(newCharacter);
