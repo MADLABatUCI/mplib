@@ -72,8 +72,10 @@
           -->
           
           <!-- Adding the 3D model of a person -->
+          <!--
           <a-entity gltf-model="#characterModel" position="-3 0 -1.5" id="person1" scale="0.75 0.75 0.75"></a-entity>
           <a-entity gltf-model="#characterModel" position="3 0 -1.5" id="person2" scale="0.75 0.75 0.75"></a-entity>
+          -->
     
           <!-- Plane with the tiled texture -->
           <a-plane 
@@ -84,13 +86,13 @@
             material="src: #tileTexture; repeat: 20 20;">
           </a-plane>
           
-          <a-box position="0 1 -5" rotation="0 45 0" color="#4CC3D9"></a-box>
-          <a-sphere position="1 1.25 -3" radius="1.25" color="#EF2D5E"></a-sphere>
-          <a-cylinder position="0.5 0.75 -2" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+          <a-box position="9 0.5 9" rotation="0 45 0" color="#4CC3D9"></a-box>
+          <a-sphere position="-9 1.25 -9" radius="1.25" color="#EF2D5E"></a-sphere>
+          <a-cylinder position="9 0.75 -9" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
           <a-sky color="#ECECEC"></a-sky>
     
           
-          <a-camera  id="camera" look-controls wasd-controls="enabled: false" position="0 1.6 5">
+          <a-camera  id="camera" look-controls="enabled: false" wasd-controls="enabled: false" position="0 1.6 5">
             <a-cursor></a-cursor>
           </a-camera>
     

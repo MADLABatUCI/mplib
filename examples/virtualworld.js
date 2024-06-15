@@ -3,12 +3,6 @@
 //    Code to demonstrate how MPLIB can be used for a multiplayer virtual world 
 // --------------------------------------------------------------------------------------
 
-
-// to do
-// disable WASD functionality and just program own cursor key controls
-
-// more interesting plane - create a single rounded square with a margin. Then tile
-
 // -------------------------------------
 // Importing functions and variables from 
 // the Firebase MultiPlayer library
@@ -47,7 +41,23 @@ updateConfigFromUrl( sessionConfig );
 // -------------------------------------
 //       Globals
 // -------------------------------------
+let cameraHeight = 1.6; // camera height
+let angleOffset = 135; // angle needed for character to face in direction camera is looking 
+let newScale = { x: 0.75, y: 0.75, z: 0.75 };
 
+let id;
+
+let climits = {
+    minX: -10,
+    maxX: 10,
+    minY: 1.6,
+    maxY: 1.7,
+    minZ: -10,
+    maxZ: 10
+};
+
+//let previousPosition = new AFRAME.THREE.Vector3();
+//let previousRotation = new AFRAME.THREE.Euler();
 
 // -------------------------------------
 //       Graphics handles
@@ -99,6 +109,28 @@ export function receiveStateChange(nodeName, newState, typeChange ) {
     //  'onChildAdded'
     //  'onChildRemoved'
 
+    if (nodeName.startsWith("Player")) { // do we a player change?
+        if (typeChange == 'onChildChanged') {
+            if (nodeName != id) {
+                updateCharacter( nodeName, newState.position, newState.rotation);
+            } else {
+                setCamera( newState.position, newState.rotation );
+            }
+                
+        } else if (typeChange == 'onChildAdded') {
+            if (nodeName != id) { 
+                // we only add characters for other players. The player for this client has a first person perspective 
+                // and does see itself
+                addCharacter( nodeName, newState.position, newState.rotation );                
+            } else {
+                setCamera( newState.position, newState.rotation );
+            }
+        } else if (typeChange == 'onChildRemoved') {
+            removeCharacter( nodeName );
+        }
+    }
+
+    
 }
 
 // Function triggered by a call to "updateStateTransaction" to evaluate if the proposed action is valid
@@ -121,11 +153,67 @@ export function evaluateUpdate( path, state, action, actionArgs ) {
 //   Virtual world code using A-frame
 // --------------------------------------------------------------------------------------
 
+function addSelf( arrivalIndex ) {
+    id = `Player${arrivalIndex}`;
+
+    let position = { x: Math.random()*16-8, y:cameraHeight, z: Math.random()*16-8 };
+
+    // Calculate rotation to face the origin
+    let dx = position.x;
+    let dz = position.z;
+    let rotationY = Math.atan2(dz, dx) * (180 / Math.PI); // Convert to degrees
+    let rotation = { x: 0, y: rotationY + 90, z: 0 }; // Adjust rotation to face the origin
+
+    // Send this new player position to firebase
+    let newState = { position, rotation };
+    updateStateDirect( id, newState);
+} 
+
+function updateCharacter(id, position, rotation) {
+    let character = document.querySelector(`#${id}`);
+    if (character) {
+        character.setAttribute('position', `${position.x} ${position.y - cameraHeight} ${position.z}`);
+        character.object3D.rotation.x = rotation.x;
+        character.object3D.rotation.y = rotation.y - angleOffset;
+        character.object3D.rotation.z = rotation.z;
+        //character.setAttribute('rotation', `${rotation.x} ${rotation.y + 180} ${rotation.z}`);
+    } else {
+        console.error(`Character with id ${id} not found`);
+    }
+}
+
+function addCharacter(id, newPosition, newRotation  ) {
+    
+    newPosition.y -= cameraHeight;
+
+    let newCharacter = document.createElement('a-entity');
+    newCharacter.setAttribute('gltf-model', '#characterModel');
+    newCharacter.setAttribute('id', id);
+    newCharacter.setAttribute('position', newPosition);
+    newCharacter.setAttribute('scale', newScale );
+    //newCharacter.setAttribute('rotation', newRotation );
+    newCharacter.object3D.rotation.x = newRotation.x;
+    newCharacter.object3D.rotation.y = newRotation.y - angleOffset;
+    newCharacter.object3D.rotation.z = newRotation.z;
+    newCharacter.addEventListener('mouseenter', showCharacterName);
+    newCharacter.addEventListener('mouseleave', hideCharacterName);
+    scene.appendChild(newCharacter);
+}
+
+function removeCharacter(id) {
+    let character = document.querySelector(`#${id}`);
+    if (character) {
+        character.parentNode.removeChild(character);
+    } else {
+        console.error(`Character with id ${id} not found`);
+    }
+}
+
 function showCharacterName(event) {
-    var name = event.target.getAttribute('id');
-    var position = event.target.getAttribute('position');
+    let name = event.target.getAttribute('id');
+    let position = event.target.getAttribute('position');
     characterNameEl.setAttribute('value', name);
-    var textPosition = { x: position.x, y: position.y + 2.5, z: position.z };
+    let textPosition = { x: position.x, y: position.y + 2.5, z: position.z };
     characterNameEl.setAttribute('position', textPosition);
     characterNameEl.setAttribute('visible', 'true');
     characterTextBackgroundEl.setAttribute('position', textPosition);
@@ -137,15 +225,7 @@ function hideCharacterName() {
     characterTextBackgroundEl.setAttribute('visible', 'false');
 }
 
-var characters = document.querySelectorAll('[gltf-model]');
 
-characters.forEach(function(character) {
-    character.addEventListener('mouseenter', showCharacterName);
-    character.addEventListener('mouseleave', hideCharacterName);
-});
-
-var previousPosition = new AFRAME.THREE.Vector3();
-var previousRotation = new AFRAME.THREE.Euler();
 
 document.addEventListener('keydown', function(event) {
     switch(event.code) {
@@ -156,20 +236,20 @@ document.addEventListener('keydown', function(event) {
             moveCamera('backward');
             break;
         case 'ArrowLeft':
-            moveCamera('left');
+            rotateCamera('left');
             break;
         case 'ArrowRight':
-            moveCamera('right');
+            rotateCamera('right');
             break;
     }
 });
 
 function moveCamera(direction) {
-    var cameraPosition = cameraEl.object3D.position;
-    var cameraRotation = cameraEl.object3D.rotation;
+    let cameraPosition = cameraEl.object3D.position;
+    let cameraRotation = cameraEl.object3D.rotation;
 
-    var moveDistance = 0.1;
-    var moveVector = new THREE.Vector3();
+    let moveDistance = 0.1;
+    let moveVector = new THREE.Vector3();
 
     if (direction === 'forward') {
         moveVector.setFromMatrixColumn(cameraEl.object3D.matrix, 0);
@@ -179,76 +259,45 @@ function moveCamera(direction) {
         moveVector.setFromMatrixColumn(cameraEl.object3D.matrix, 0);
         moveVector.crossVectors(cameraEl.object3D.up, moveVector);
         cameraPosition.add(moveVector.multiplyScalar(-moveDistance));
-    } else if (direction === 'left') {
-        moveVector.setFromMatrixColumn(cameraEl.object3D.matrix, 0);
-        cameraPosition.add(moveVector.multiplyScalar(-moveDistance));
+    }
+
+    
+    cameraPosition.x = Math.min(Math.max(cameraPosition.x, climits.minX), climits.maxX);
+    cameraPosition.y = Math.min(Math.max(cameraPosition.y, climits.minY), climits.maxY);
+    cameraPosition.z = Math.min(Math.max(cameraPosition.z, climits.minZ), climits.maxZ);
+
+    // Send this new player position to firebase
+    let newState = { position: { x:cameraPosition.x,y:cameraPosition.y,z:cameraPosition.z }, rotation: { x:cameraRotation.x,y:cameraRotation.y,z:cameraRotation.z }};
+    updateStateDirect( id, newState);
+}
+
+function rotateCamera(direction) {
+    let cameraPosition = cameraEl.object3D.position;
+    let cameraRotation = cameraEl.object3D.rotation;
+    let rotationAmount = 0.02; // Adjust the rotation speed as needed
+
+    if (direction === 'left') {
+        cameraRotation.y += rotationAmount;
     } else if (direction === 'right') {
-        moveVector.setFromMatrixColumn(cameraEl.object3D.matrix, 0);
-        cameraPosition.add(moveVector.multiplyScalar(moveDistance));
+        cameraRotation.y -= rotationAmount;
     }
 
-    let climits = {
-        minX: -10,
-        maxX: 10,
-        minY: 1.6,
-        maxY: 1.7,
-        minZ: -10,
-        maxZ: 10
-    };
-
-    cameraPosition.x = Math.min(Math.max(cameraPosition.x, climits.minX), climits.maxX);
-    cameraPosition.y = Math.min(Math.max(cameraPosition.y, climits.minY), climits.maxY);
-    cameraPosition.z = Math.min(Math.max(cameraPosition.z, climits.minZ), climits.maxZ);
-    cameraEl.setAttribute('position', cameraPosition);
-
-    if (!cameraPosition.equals(previousPosition) || !cameraRotation.equals(previousRotation)) {
-        console.log(`Camera Position: x=${cameraPosition.x.toFixed(1)}, y=${cameraPosition.y.toFixed(1)}, z=${cameraPosition.z.toFixed(1)} Rotation: x=${(cameraRotation.x * (180 / Math.PI)).toFixed(1)}, y=${(cameraRotation.y * (180 / Math.PI)).toFixed(1)}, z=${(cameraRotation.z * (180 / Math.PI)).toFixed(1)}`);
-
-        previousPosition.copy(cameraPosition);
-        previousRotation.copy(cameraRotation);
-
-        //requestAnimationFrame(tick);
-    }
+    // Send this new player position to firebase
+    let newState = { position: { x:cameraPosition.x,y:cameraPosition.y,z:cameraPosition.z }, rotation: { x:cameraRotation.x,y:cameraRotation.y,z:cameraRotation.z }};
+    updateStateDirect( id, newState);
 }
 
+function setCamera( cameraPosition, cameraRotation ) {
+    cameraEl.setAttribute('position', cameraPosition);
+    cameraEl.object3D.rotation.set(cameraRotation.x, cameraRotation.y, cameraRotation.z);
+    requestAnimationFrame(tick);
+}
 
 function tick() {
     requestAnimationFrame(tick);
 }
 
-/*
-tick();
 
-
-function tick() {
-    var cameraPosition = cameraEl.object3D.position;
-    var cameraRotation = cameraEl.object3D.rotation;
-
-    let climits = {
-    minX: -10,
-    maxX: 10,
-    minY: 1.6,
-    maxY: 1.7,
-    minZ: -10,
-    maxZ: 10
-    };
-
-    cameraPosition.x = Math.min(Math.max(cameraPosition.x, climits.minX), climits.maxX);
-    cameraPosition.y = Math.min(Math.max(cameraPosition.y, climits.minY), climits.maxY);
-    cameraPosition.z = Math.min(Math.max(cameraPosition.z, climits.minZ), climits.maxZ);
-    cameraEl.setAttribute('position', cameraPosition);
-    
-    if (!cameraPosition.equals(previousPosition) || !cameraRotation.equals(previousRotation)) {
-    console.log(`Camera Position: x=${cameraPosition.x.toFixed(1)}, y=${cameraPosition.y.toFixed(1)}, z=${cameraPosition.z.toFixed(1)} Rotation: x=${(cameraRotation.x * (180 / Math.PI)).toFixed(1)}, y=${(cameraRotation.y * (180 / Math.PI)).toFixed(1)}, z=${(cameraRotation.z * (180 / Math.PI)).toFixed(1)}`);
-
-    previousPosition.copy(cameraPosition);
-    previousRotation.copy(cameraRotation);
-    }
-    
-    requestAnimationFrame(tick);
-}
-*/
-    
 function showInstructions() {
     instructionsScreen.style.display = 'block';
 }
@@ -303,6 +352,9 @@ export function startSession(sessionInfo) {
 
     let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
     //messageGame.innerHTML = str2;
+
+    // Add this player's avatar 
+    addSelf( sessionInfo.arrivalIndex ); 
 
     tick();
 }
