@@ -156,6 +156,7 @@ export function evaluateUpdate( path, state, action, actionArgs ) {
 //   Virtual world code using A-frame
 // --------------------------------------------------------------------------------------
 
+/*
 function addSelf( arrivalIndex ) {
     id = `Player${arrivalIndex}`;
 
@@ -164,8 +165,8 @@ function addSelf( arrivalIndex ) {
     // Calculate rotation to face the origin
     let dx = position.x;
     let dz = position.z;
-    let rotationY = Math.atan2(dz, dx); // Radians
-    let rotation = { x: 0, y: rotationY + 1.5 * Math.PI , z: 0 }; // Adjust rotation to face the origin
+    let rotationY = Math.atan2(dz, dx) + Math.PI; // Angle should be expressed in radians
+    let rotation = { x: 0, y: rotationY , z: 0 }; // Adjust rotation to face the origin
 
     let direction = 'idle';
 
@@ -173,6 +174,37 @@ function addSelf( arrivalIndex ) {
     let newState = { position, rotation, direction };
     updateStateDirect( id, newState);
 } 
+*/
+
+
+function addSelf(arrivalIndex) {
+    id = `Player${arrivalIndex}`;
+
+    // Generate a random position
+    const position = new THREE.Vector3(Math.random() * 16 - 8, cameraHeight, Math.random() * 16 - 8);
+
+    // Calculate the direction vector from the position to the origin
+    const origin = new THREE.Vector3(0, cameraHeight, 0);
+    const directionVector = origin.clone().sub(position).normalize();
+
+    // Create a quaternion to represent the rotation
+    const quaternion = new THREE.Quaternion();
+    quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), directionVector);
+
+    // Convert the quaternion to Euler angles
+    const rotation = new THREE.Euler().setFromQuaternion(quaternion);
+
+    const direction = 'idle';
+
+    // Send this new player position to Firebase
+    const newState = { 
+        position: { x: position.x, y: position.y, z: position.z },
+        rotation: { x: rotation.x, y: rotation.y, z: rotation.z },
+        direction 
+    };
+
+    updateStateDirect(id, newState);
+}
 
 let updateTimeouts = {};
 
