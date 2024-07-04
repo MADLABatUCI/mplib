@@ -156,23 +156,62 @@ export function evaluateUpdate( path, state, action, actionArgs ) {
 //   Virtual world code using A-frame
 // --------------------------------------------------------------------------------------
 
+
 function addSelf( arrivalIndex ) {
     id = `Player${arrivalIndex}`;
 
-    let position = { x: Math.random()*16-8, y:cameraHeight, z: Math.random()*16-8 };
+    let radius = 8;
+    let angle = Math.random() * 2 * Math.PI;
+    //let angle = 0.25 * Math.PI;
+
+    let position = { x: Math.sin( angle )*radius, y:cameraHeight, z: Math.cos(angle)*radius };
 
     // Calculate rotation to face the origin
-    let dx = position.x;
-    let dz = position.z;
-    let rotationY = Math.atan2(dz, dx); // Radians
-    let rotation = { x: 0, y: rotationY + 1.5 * Math.PI , z: 0 }; // Adjust rotation to face the origin
+    let rotationY = angle; // +  Math.PI; // Angle should be expressed in radians
+    let rotation = { x: 0, y: rotationY , z: 0 }; // Adjust rotation to face the origin
 
     let direction = 'idle';
+
+    //console.log( `position=${position.x},${position.y},${position.z}` );
+    //console.log( `rotation=${rotation.x},${rotation.y},${rotation.z}` );
+
 
     // Send this new player position to firebase
     let newState = { position, rotation, direction };
     updateStateDirect( id, newState);
 } 
+
+
+/*
+function addSelf(arrivalIndex) {
+    id = `Player${arrivalIndex}`;
+
+    // Generate a random position
+    const position = new THREE.Vector3(Math.random() * 16 - 8, cameraHeight, Math.random() * 16 - 8);
+
+    // Calculate the direction vector from the position to the origin
+    const origin = new THREE.Vector3(0, cameraHeight, 0);
+    const directionVector = origin.clone().sub(position).normalize();
+
+    // Create a quaternion to represent the rotation
+    const quaternion = new THREE.Quaternion();
+    quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), directionVector);
+
+    // Convert the quaternion to Euler angles
+    const rotation = new THREE.Euler().setFromQuaternion(quaternion);
+
+    const direction = 'idle';
+
+    // Send this new player position to Firebase
+    const newState = { 
+        position: { x: position.x, y: position.y, z: position.z },
+        rotation: { x: rotation.x, y: rotation.y, z: rotation.z },
+        direction 
+    };
+
+    updateStateDirect(id, newState);
+}
+*/
 
 let updateTimeouts = {};
 
@@ -294,7 +333,7 @@ function moveCamera(direction) {
 
     let moveVector = new THREE.Vector3();
 
-    if (direction === 'forward') {
+    if ((direction === 'forward') || (direction == 'idle')) {
         moveVector.setFromMatrixColumn(cameraEl.object3D.matrix, 0);
         moveVector.crossVectors(cameraEl.object3D.up, moveVector);
         cameraPosition.add(moveVector.multiplyScalar(moveDistance));
@@ -335,6 +374,7 @@ function rotateCamera(direction) {
 function setCamera( cameraPosition, cameraRotation ) {
     cameraEl.setAttribute('position', cameraPosition);
     cameraEl.object3D.rotation.set(cameraRotation.x, cameraRotation.y, cameraRotation.z);
+    //console.log( `rotation=${cameraRotation.x},${cameraRotation.y},${cameraRotation.z}` );
     requestAnimationFrame(tick);
 }
 

@@ -43,7 +43,7 @@
         <div class="containertext" id="instructionText">
         <p> 
         This demonstration shows how multiple people can appear simulteneously in a 3D virtual world that can be viewed on a desktop as well as VR devices. Each participant
-        appears as an avatar in the scene. On a desktop, use the mouse and cursor keys to move around the scene. 
+        appears as an avatar in the scene. On a desktop, use the cursor keys to move around the scene. 
         </p> 
         </div>
         <a href="#" class="button" id="joinBtn">Proceed</a> 
@@ -65,8 +65,9 @@
           
             <!-- Load assetts -->
           <a-assets>
-            <img id="tileTexture" src="/mplib/examples/tile-pattern.jpg">
-            <a-asset-item id="characterModel" src="/mplib/examples/CharacterAnimated.glb"></a-asset-item>
+            <img id="tileTexture" src="/mplib/examples/virtualworld/tile-pattern.jpg">
+            <img id="tileTexture2" src="/mplib/examples/virtualworld/rounded_rectangle.png">
+            <a-asset-item id="characterModel" src="/mplib/examples/virtualworld/CharacterAnimated.glb"></a-asset-item>
           </a-assets>
     
           <!--
@@ -85,12 +86,14 @@
             rotation="-90 0 0" 
             width="20" 
             height="20" 
-            material="src: #tileTexture; repeat: 20 20;">
+            material="src: #tileTexture2; repeat: 20 20;">
           </a-plane>
           
-          <a-box position="9 0.5 9" rotation="0 45 0" color="#4CC3D9"></a-box>
-          <a-sphere position="-9 1.25 -9" radius="1.25" color="#EF2D5E"></a-sphere>
+          <a-box      position="9 0.5 9" rotation="0 45 0" color="#4CC3D9"></a-box>
+          <a-sphere   position="-9 1.25 -9" radius="1.25" color="#EF2D5E"></a-sphere>
           <a-cylinder position="9 0.75 -9" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+          <a-box      position="-9 0.5 9" rotation="0 45 0" color="#0CC309"></a-box>
+          <a-cylinder position="0 0.25 0" radius="0.1" height="0.5" color="#FFC65D"></a-cylinder>
           <a-sky color="#ECECEC"></a-sky>
     
           
@@ -123,11 +126,11 @@
     <script src="/mplib/src/mpconfig.js"></script>
     <script>
         // Filename of the game code (needs to match file below)
-        var jsCode = '/mplib/examples/virtualworld.js';
+        var jsCode = '/mplib/examples/virtualworld/virtualworld.js';
     </script>
 
     <script type="module" src="/mplib/src/mplib.js" async></script>
-    <script type="module" src="/mplib/examples/virtualworld.js"></script>
+    <script type="module" src="/mplib/examples/virtualworld/virtualworld.js"></script>
 
 
     
