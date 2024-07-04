@@ -20,7 +20,7 @@ import {
 //       Game configuration
 // -------------------------------------
 // studyId is the name of the root node we create in the database
-export const studyId = 'numobjects'; 
+export const studyId = 'groupestimation'; 
 // Configuration setting for the session
 export const sessionConfig = {
     minPlayersNeeded: 2, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
