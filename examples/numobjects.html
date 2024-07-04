@@ -81,41 +81,118 @@
             display: table-cell;
         }
         .person {
-  position: relative;
-  height: 150px;
-  width: 130px;
+            margin: auto;
+            position: relative;
+            height: 150px;
+            width: 130px;
+        }
+
+        .person:after {
+            content: '';
+            display: block;
+            position: absolute;
+            box-sizing: border-box;
+            top: 75px;
+            height: 50px;
+            width: 130px;
+            border: 0px solid lightgrey;
+            border-radius: 45px 45px 0 0;
+            border-width: 15px 15px 0px 15px;
+        }
+
+        .person:before {
+            content: '';
+            display: block;
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 25px;
+            height: 80px;
+            width: 80px;
+            border-radius: 50%;
+            border: 15px solid lightgrey;
+        }
+        #player2:after {
+            border-color: green;
+        }
+        #player2:before {
+            border-color: green;
+        }
+        .guess {
+            width: 80%;
+        }
+
+        .box{
+            position: relative;
+            /*top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;*/
+            margin: auto;
+            width: 275px;
+            height: 400px;
+        }
+
+        .jar-walls{
+            height: 60%;
+            width: 80%;
+            background: #a1e0da;
+            background-color: white;
+            border-radius: 3rem;
+            position: absolute; 
+            bottom: 20.5%;
+            left: 10%;
+            opacity: 0.5;
+            z-index: 3;
+        }
+
+        .jar-top{
+            width: 50%;
+            height: 5%;
+            background: #a1e0da;
+            background-color: white;
+            position: absolute;
+            bottom: 80.5%;
+            left: 25%;
+            opacity: 0.7;
+            z-index: 3;
+        }
+
+        .jar-bottom{
+            width: 50%;
+            height: 1%;
+            background: #a1e0da;
+            background-color: white;
+            position: absolute;
+            bottom: 20%;
+            left: 25%;
+            opacity: 0.7;
+        }
+
+.jar-glossy-long{
+  width: 3%;
+  height: 20%;
+  border-radius: 2rem;
+  background: #ddfbff;
+  position: absolute;
+  bottom: 20%;
+  left: 5%;
 }
 
-.person:after {
-  content: '';
-  display: block;
+.jar-glossy-short{
+  width: 3%;
+  height: 5%;
+  border-radius: 2rem;
+  background: #ddfbff;
   position: absolute;
-  box-sizing: border-box;
-  top: 75px;
-  height: 50px;
-  width: 130px;
-  border: 0px solid lightgrey;
-  border-radius: 45px 45px 0 0;
-  border-width: 15px 15px 0px 15px;
-}
-
-.person:before {
-  content: '';
-  display: block;
-  box-sizing: border-box;
-  position: absolute;
-  top: 0;
-  left: 25px;
-  height: 80px;
-  width: 80px;
-  border-radius: 50%;
-  border: 15px solid lightgrey;
+  bottom: 45%;
+  left: 5%;
 }
     </style>
 </head>
 
 <body>
-    <div class="header">
+    <!--<div class="header">
         <div class="header-content">
             <div class="header-left">
                 A
@@ -129,10 +206,8 @@
                 B
             </div>
         </div>
-    </div>
-    <main class="content">
-        
-    </div>
+    </div>-->
+    <!--<main class="content">
         <div class="row">
             <div class="container">
                 <div class="col-12" style="display: none;">
@@ -157,17 +232,70 @@
             </div>
         </div>
         
-    </main>
+    </main>-->
     
-    <div class="container" id="waitingRoomScreen" style="display:none">
+    <div class="container" id="instructionsScreen"><!-- style="display: none;">-->
+        <h1>Instructions</h1>
+        <div class="containertext" id="instructionText">
+        
+        </div>
+        <a href="#" class="button" id="joinBtn">Proceed</a> 
+    </div>
+    <div class="container" id="waitingRoomScreen"><!--style="display:none">-->
         <h1>Waiting Room</h1>  
         <div class="containertext" id="messageWaitingRoom"></div>
     </div>
-    <div class="container" id="gameScreen" style="display:none ; caret-color: transparent;">
-        <h1>Two Player Tic-Tac-Toe</h1>
-        <div class="textturn" id="turnMessage">You are player X: it is your turn</div>
+    <div class="container" id="gameScreen" style="caret-color: transparent;"><!--display:none;">-->
+        <h1>Guess the number of objects (<span id="numPlayers">X</span> players)</h1>
+        <div class="textturn" id="turnMessage">You are player <span id="playerID">X</span>: make your guess</div>
         <div id="game">
-            <div id="board">
+            <div class="row">
+                <div class="col-12">
+                    <div class="box">
+                        <div class="jar-bottom"></div>
+                        <div class="jar-walls">
+                            <div class="jar-glossy-long"></div>
+                            <div class="jar-glossy-short"></div>
+                        </div>
+                        <div class="jar-top"></div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="row">
+                <div class="col-1"></div>
+                <div class="col-2">
+                    <div class="person" id="player1">
+
+                    </div>
+                    <input class="guess" type="number">
+                </div>
+                <div class="col-2">
+                    <div class="person" id="player2">
+                    </div>
+                    <input class="guess" type="number">
+                </div>
+                <div class="col-2">
+                    <div class="person" id="player3">
+
+                    </div>
+                    <input class="guess" type="number">
+                </div>
+                <div class="col-2">
+                    <div class="person" id="player4">
+
+                    </div>
+                    <input class="guess" type="number">
+                </div>
+                <div class="col-2">
+                    <div class="person" id="player5">
+
+                    </div>
+                    <input class="guess" type="number">
+                </div>
+                <div class="col-1"></div>
+            </div>
+            <!--<div id="board">
                 <div class="cell" data-index="0"></div>
                 <div class="cell" data-index="1"></div>
                 <div class="cell" data-index="2"></div>
@@ -177,7 +305,7 @@
                 <div class="cell" data-index="6"></div>
                 <div class="cell" data-index="7"></div>
                 <div class="cell" data-index="8"></div>
-            </div>
+            </div>-->
         </div>
         <div class="containertext" id="messageGame"></div>
         <a href="#" class="button" id="leaveBtn">End Session</a> 
