@@ -310,7 +310,7 @@ function startSession() {
     });
 
 
-    // Create a listener for additions to the gamestate
+    // Create a listener for additions to the state
     onChildAdded(stateRef, (snapshot) => {
         const nodeName = snapshot.key;
         const state = snapshot.val();
@@ -320,7 +320,7 @@ function startSession() {
         }
     });
 
-    // Create a listener for additions to the gamestate
+    // Create a listener for additions to the state
     onChildRemoved(stateRef, (snapshot) => {
         const nodeName = snapshot.key;
         const state = snapshot.val();
@@ -514,9 +514,19 @@ async function sessionUpdate(action, thisPlayer) {
                     if (numP == 0) {
                         delete currentState[sessionIdThis];
 
-                        
-                        off(stateRef); // remove the listener for game state
-                        remove( stateRef ); // delete the state
+                        // Remove this session
+                        /*
+                        let sessionRef = ref(db, `${studyId}/sessions/${si.sessionId}/`);
+                        off( sessionsRef ); // remove the listener for all sessions changes
+                        remove( sessionRef ); // and remove this session
+                        */
+
+                        off( presenceRef); // remove the callback that sets "I disconnected"
+
+                        if (stateRef) {
+                           off(stateRef); // remove the listener for game state (if one was defined)
+                           remove( stateRef ); // delete the state
+                        }
 
                     } else if ((sessionConfig.allowReplacements) && ((sessionConfig.maxHoursSession === 0) || (hoursElapsed < sessionConfig.maxHoursSession))) {
                         // If replacemens are allowed for session and there is time remaining to add players ....
