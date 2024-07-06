@@ -12,6 +12,7 @@ import {
     query, orderByChild, equalTo, onDisconnect, runTransaction
 } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-database.js"; //"./firebase/firebase-database.js";  //;
 
+export let hasControl = false; // variable exposed to the client code 
 
 // Initialize the session information that the client will see
 let si = {
@@ -30,17 +31,14 @@ let si = {
     sessionErrorMsg: ''
 };
 
-export let hasControl = false;
-
 let sessionConfig;
 let studyId;
 let verbosity;
-
 let initSession = false; // determines whether a session has be initiated 
 let sessionStarted = false;
 let stateRef;
 let presenceRef, connectedRef;
-let sessionsRef, sessionsDataRef, recordEventsRef, recordPlayerRef;
+let sessionsRef, recordEventsRef, recordPlayerRef;
 let offsetRef;
 let serverTimeOffset = 0; // default
 let numPlayersBefore = 0;
@@ -57,52 +55,35 @@ const firebaseApp = initializeApp(firebasempConfig);
 const auth = getAuth(firebaseApp);
 const db = getDatabase(firebaseApp);
 
-/*
-// Use anonymous signin
-await signInAnonymously(auth)
-    .then(() => {
-        myconsolelog("Firebase authentication successful...");
-    })
-    .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        const msg = "Firebase authentication failed. Errorcode: " + errorCode + " : " + errorMessage;
-        //console.error( msg );
-        throw (msg);
-    });
-
-await onAuthStateChanged(auth, (user) => {
-    if (user) {
-        // User is signed in, see docs for a list of available properties
-        // https://firebase.google.com/docs/reference/js/firebase.User
-    } else {
-        // User is signed out
-        myconsolelog("User is signed out");
-    }
-});
-*/
 
 //------------------------------------------------------
 // Define some new functions we can use in other code
 //------------------------------------------------------
-// Set the session parameters for MPLIB
-export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbosityNow ) {
-    sessionConfig = sessionConfigNow;
-    studyId = studyIdNow;
-    verbosity = verbosityNow;
 
+// Initialize the session parameters, name of the study, and list of functions that are used for the callbacks
+export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbosityNow ) {
+    sessionConfig = sessionConfigNow; // session parameters
+    studyId = studyIdNow; // name of the study that is used as the root node in firebase
+    verbosity = verbosityNow; // verbosity = 0: no messages to console; 1: write messages to the console 
+
+    // List of callback functions that MPLIB can use when session or state changes
     callback_sessionChange = funList.sessionChangeFunction;
     callback_receiveStateChange = funList.receiveStateChangeFunction;
     callback_evaluateUpdate = funList.evaluateUpdateFunction;
 
 
-    // for now, create a random id and not the id associated with the browser
+    // Create a random id for the player; this id is across browser windows on the same client  
     // this facilitates testing of code on the same computer across different browser windows
-    //si.playerId = user.uid;
     si.playerId = generateId();
-    //si.urlParams = getUrlParameters(); // add URL params in the sessionInfo
+    myconsolelog("Player id=" + si.playerId);
 
-    // Database reference to all session info  
+    initializeFirebaseListeners();
+}
+
+function initializeFirebaseListeners() {
+    // Set up the listeners used to monitor changes to the session state
+
+    // Database reference to all sessions (not just the current session on this client)  
     sessionsRef = ref(db, `${studyId}/sessions`);
 
     // This listener will detect all session changes (e.g. joining/leaving)
@@ -112,112 +93,18 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbos
         if (sessions !== null) {
             var keys = Object.keys(sessions);
             for (var i = 0; i < keys.length; i++) {
-                var thisSession = keys[i];
-                let session = sessions[thisSession];
+                var sessionId = keys[i];
+                let session = sessions[sessionId];
                 if (session !== null) {
                     // Does this session involve this player?
                     if (si.playerId in session.players) {
-                        let currentStatus = session.status;
-                        si.numPlayers = Object.keys(session.players).length;
-                        si.playerIds = Object.keys( session.players );
-                        si.arrivalIndices = Object.values(session.players).map(player => player.arrivalIndex);
-                        si.countdown = null;
-
-                        // Does this player have control?
-                        hasControl = (session.playerControl == si.playerId);
-
-                        if ((currentStatus == 'waiting') & (!initSession)) {
-                            initSession = true;
-                            sessionStarted = false;
-                            si.sessionId = thisSession;
-                            si.sessionIndex = session.sessionIndex;
-                            si.arrivalIndex = session.players[si.playerId].arrivalIndex;
-                            numPlayersBefore = si.numPlayers;
-                            si.status = 'waitingRoomStarted';
-                            si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
-                            recordSessionEvent( si );
-                            // trigger callback 
-                            callback_sessionChange(si, 'joinedWaitingRoom' );                                   
-                        } else if ((currentStatus == 'active') & (!sessionStarted)) {
-                            initSession = true;
-                            sessionStarted = true;
-                            si.sessionId = thisSession;
-                            si.sessionIndex = session.sessionIndex;
-                            si.arrivalIndex = session.players[si.playerId].arrivalIndex;
-                            numPlayersBefore = si.numPlayers;
-                            si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
-                            
-
-                            if (sessionConfig.exitDelayWaitingRoom==0) {
-                                si.status = 'sessionStarted';
-                                recordSessionEvent( si );
-                                startSession(); // Can start the session without delay
-                            } else {
-                                // Delay the start of entering the session
-                                let remainingSeconds = sessionConfig.exitDelayWaitingRoom;
-
-                                intervalId = setInterval(() => {
-                                    if (remainingSeconds > 0) {
-                                        si.status = 'waitingRoomCountdown';
-                                        si.countdown = remainingSeconds;
-                                        callback_sessionChange( si , 'updateWaitingRoom' );
-                                        remainingSeconds--;
-                                    } else {
-                                        clearInterval(intervalId); 
-                                        si.status = 'sessionStarted';
-                                        recordSessionEvent( si );
-                                        startSession();
-                                    }
-                                }, 1000);
-                            }
-                            
-                        } else if (si.numPlayers !== numPlayersBefore) {
-                            numPlayersBefore = si.numPlayers;
-                            if (currentStatus == 'waiting') {
-                                si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
-                                recordSessionEvent( si );
-                                callback_sessionChange( si , 'updateWaitingRoom' );
-                            }
-                            if (currentStatus == 'active') {
-                                si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
-                                if (si.status == 'waitingRoomCountdown') {
-                                    // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
-                                    // ...
-                                } else {
-                                    recordSessionEvent( si );                                        
-                                    callback_sessionChange( si , 'updateOngoingSession' );
-
-                                    // Check if the number of players is below the minimum
-                                    if (si.numPlayers < sessionConfig.minPlayersNeeded) {
-                                        // Leave session immediately
-                                        si.sessionErrorCode = 3;
-                                        si.sessionErrorMsg = 'Number of players fell below minimum needed';
-                                        recordSessionEvent( si );
-                                        leaveSession();
-                                        
-                                    }                                         
-                                }
-                                
-                            }
-                        }
-
-                        if (session.playerControl !== playerControlBefore) {
-                            if (!hasControl) {
-                                //mpg.losesControl();
-                            } else {
-                                //mpg.gainedControl();
-                            }
-                            playerControlBefore = session.playerControl;
-                        }
-
+                        triggerSessionCallback( session , sessionId );
                         break;
                     }
                 }
             };
         }
-
     });
-
 
     // Remove *other* clients who are disconnecting
     onChildAdded(ref(db, `${studyId}/presence/`), (snapshot) => {
@@ -234,8 +121,105 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbos
         serverTimeOffset = snap.val();
         myconsolelog(`Server offset time: ${serverTimeOffset}`);
     });
+}
 
-    myconsolelog("Player id=" + si.playerId);
+function triggerSessionCallback( session , sessionId ) {
+    // Process the information in "session" and trigger the appropriate callbacks on the client 
+
+    let currentStatus = session.status; // either 'waiting' or 'active'
+    si.numPlayers = Object.keys(session.players).length;
+    si.playerIds = Object.keys( session.players );
+    si.arrivalIndices = Object.values(session.players).map(player => player.arrivalIndex);
+    si.countdown = null;
+
+    
+    if ((currentStatus == 'waiting') & (!initSession)) {
+        initSession = true;
+        sessionStarted = false;
+        si.sessionId = sessionId;
+        si.sessionIndex = session.sessionIndex;
+        si.arrivalIndex = session.players[si.playerId].arrivalIndex;
+        numPlayersBefore = si.numPlayers;
+        si.status = 'waitingRoomStarted';
+        si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
+        recordSessionEvent( si );
+        // trigger callback 
+        callback_sessionChange(si, 'joinedWaitingRoom' );                                   
+    } else if ((currentStatus == 'active') & (!sessionStarted)) {
+        initSession = true;
+        sessionStarted = true;
+        si.sessionId = sessionId;
+        si.sessionIndex = session.sessionIndex;
+        si.arrivalIndex = session.players[si.playerId].arrivalIndex;
+        numPlayersBefore = si.numPlayers;
+        si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
+        
+
+        if (sessionConfig.exitDelayWaitingRoom==0) {
+            si.status = 'sessionStarted';
+            recordSessionEvent( si );
+            startSession(); // Can start the session without delay
+        } else {
+            // Delay the start of entering the session
+            let remainingSeconds = sessionConfig.exitDelayWaitingRoom;
+
+            intervalId = setInterval(() => {
+                if (remainingSeconds > 0) {
+                    si.status = 'waitingRoomCountdown';
+                    si.countdown = remainingSeconds;
+                    callback_sessionChange( si , 'updateWaitingRoom' );
+                    remainingSeconds--;
+                } else {
+                    clearInterval(intervalId); 
+                    si.status = 'sessionStarted';
+                    recordSessionEvent( si );
+                    startSession();
+                }
+            }, 1000);
+        }
+        
+    } else if (si.numPlayers !== numPlayersBefore) {
+        numPlayersBefore = si.numPlayers;
+        if (currentStatus == 'waiting') {
+            si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
+            recordSessionEvent( si );
+            callback_sessionChange( si , 'updateWaitingRoom' );
+        }
+        if (currentStatus == 'active') {
+            si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
+            if (si.status == 'waitingRoomCountdown') {
+                // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
+                // ...
+            } else {
+                recordSessionEvent( si );                                        
+                callback_sessionChange( si , 'updateOngoingSession' );
+
+                // Check if the number of players is below the minimum
+                if (si.numPlayers < sessionConfig.minPlayersNeeded) {
+                    // Leave session immediately
+                    si.sessionErrorCode = 3;
+                    si.sessionErrorMsg = 'Number of players fell below minimum needed';
+                    recordSessionEvent( si );
+                    leaveSession();
+                    
+                }                                         
+            }
+            
+        }
+    }
+
+    // Does this player have control?
+    hasControl = (session.playerControl == si.playerId);
+
+    if (session.playerControl !== playerControlBefore) {
+        if (!hasControl) {
+            //mpg.losesControl();
+        } else {
+            //mpg.gainedControl();
+        }
+        playerControlBefore = session.playerControl;
+    }
+
 }
 
 
@@ -314,33 +298,17 @@ function startSession() {
     recordPlayerData( 'urlparams', getUrlParameters() );
     recordPlayerData( 'sessionInfo' , si );
 
-    const listenerModel = 'childChanges';
-
-    if (listenerModel == 'childChanges') {
-        // Create a listener for changes in the state 
-        onChildChanged(stateRef, (snapshot) => {
-            const nodeName = snapshot.key;
-            const state = snapshot.val();
-            if (state != null) {
-                // execute this function in the client game code 
-                callback_receiveStateChange(nodeName, state, 'onChildChanged');
-            }
-        });
-    } else {
-        error( 'Not tested yet');
-        // Create a listener for any change in the state 
-        /*
-        onValue(stateRef, (snapshot) => {
-            const nodeName = snapshot.key;
-            const state = snapshot.val();
-            if (state != null) {
-                // execute this function in the client game code 
-                callback_receiveStateChange(nodeName, state, 'onValue');
-            }
-        });
-        */
-    }
     
+    // Create a listener for changes in the state 
+    onChildChanged(stateRef, (snapshot) => {
+        const nodeName = snapshot.key;
+        const state = snapshot.val();
+        if (state != null) {
+            // execute this function in the client game code 
+            callback_receiveStateChange(nodeName, state, 'onChildChanged');
+        }
+    });
+
 
     // Create a listener for additions to the gamestate
     onChildAdded(stateRef, (snapshot) => {
@@ -772,21 +740,6 @@ async function sessionUpdate(action, thisPlayer) {
             player: thisPlayer, initiatingPlayer: si.playerId, timestamp: serverTimestamp()
         };
 
-
-        
-        // Are we recording the session data?
-        /*
-        if (sessionConfig.recordData) {
-            // Database reference to all recorded data about sessions   
-            sessionsDataRef = ref(db, `${studyId}/recordedData/${si.sessionId}/sessions//sessionInfo`);
-
-            // Create a new child under session data
-            let newDataRef = push(sessionsDataRef);
-            set(newDataRef, returnResult);
-        }
-        */
-        
-
         return returnResult;
 
     }).catch(error => {
@@ -863,7 +816,8 @@ function getUrlParameters() {
 }
 
 function myconsolelog(message) {
-    if (verbosity > 1) {
+    if (verbosity >= 1) {
         console.log(message);
     }
 }
+
