@@ -55,7 +55,7 @@ initializeMPLIB( sessionConfig , studyId , funList, verbosity );
 // -------------------------------------
 //       Globals
 // -------------------------------------
-
+let playerId;
 
 // -------------------------------------
 //       Graphics handles
@@ -123,6 +123,7 @@ function sessionChange(sessionInfo, typeChange) {
    // 'updateOngoingSession'
    // 'endSession'
 
+   playerId = sessionInfo.playerId; // the playerId for this client
    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
    let numPlayers = sessionInfo.numPlayers;
    let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;

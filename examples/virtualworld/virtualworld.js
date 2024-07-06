@@ -122,7 +122,7 @@ function receiveStateChange(nodeName, newState, typeChange ) {
     //  'onChildAdded'
     //  'onChildRemoved'
 
-    if (nodeName.startsWith("Player")) { // do we a player change?
+    if (nodeName.startsWith("Player")) { // do we have a player change?
         if (typeChange == 'onChildChanged') {
             if (nodeName != id) {
                 updateCharacter( nodeName, newState.position, newState.rotation, newState.direction );
