@@ -5,6 +5,7 @@
 
 # Added by MS
 test/
+examples/gridworld/
 src/notes.md
 .vscode/
 .gitignore

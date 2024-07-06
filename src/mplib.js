@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------- 
-      Firebase MultiPlayer Library v. 1.20
+      Firebase MultiPlayer Library v. 1.30
    ----------------------------------------------------------
 */
 
@@ -11,12 +11,6 @@ import {
     onChildRemoved, remove, serverTimestamp,
     query, orderByChild, equalTo, onDisconnect, runTransaction
 } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-database.js"; //"./firebase/firebase-database.js";  //;
-
-let mpg;
-async function loadModule() {
-    // Load the functions and data structures from the game code
-    mpg = await import(jsCode);
-}
 
 
 // Initialize the session information that the client will see
@@ -38,6 +32,9 @@ let si = {
 
 export let hasControl = false;
 
+let sessionConfig;
+let studyId;
+let verbosity;
 
 let initSession = false; // determines whether a session has be initiated 
 let sessionStarted = false;
@@ -52,6 +49,11 @@ let playerControlBefore = '';
 let intervalId; // interval timer for the waiting room countdown;
 let endSessionTimerId;
 
+
+let callback_sessionChange;
+let callback_receiveStateChange;
+let callback_evaluateUpdate;
+
 // Initialize App
 const firebaseApp = initializeApp(firebasempConfig);
 const auth = getAuth(firebaseApp);
@@ -60,7 +62,7 @@ const db = getDatabase(firebaseApp);
 // Use anonymous signin
 await signInAnonymously(auth)
     .then(() => {
-        //myconsolelog("Firebase authentication successful...")
+        myconsolelog("Firebase authentication successful...");
     })
     .catch((error) => {
         const errorCode = error.code;
@@ -74,164 +76,6 @@ await onAuthStateChanged(auth, (user) => {
     if (user) {
         // User is signed in, see docs for a list of available properties
         // https://firebase.google.com/docs/reference/js/firebase.User
-
-        // for now, create a random id and not the id associated with the browser
-        // this facilitates testing of code on the same computer across different browser windows
-        //si.playerId = user.uid;
-        si.playerId = generateId();
-        //si.urlParams = getUrlParameters(); // add URL params in the sessionInfo
-
-        // Once the main game code is loaded...
-        loadModule().then(result => {
-            // Database reference to all session info  
-            sessionsRef = ref(db, `${mpg.studyId}/sessions`);
-
-            // This listener will detect all session changes (e.g. joining/leaving)
-            onValue(sessionsRef, (snapshot) => {
-                const whNode = snapshot.key;
-                const sessions = snapshot.val();
-                if (sessions !== null) {
-                    var keys = Object.keys(sessions);
-                    for (var i = 0; i < keys.length; i++) {
-                        var thisSession = keys[i];
-                        let session = sessions[thisSession];
-                        if (session !== null) {
-                            // Does this session involve this player?
-                            if (si.playerId in session.players) {
-                                let currentStatus = session.status;
-                                si.numPlayers = Object.keys(session.players).length;
-                                si.playerIds = Object.keys( session.players );
-                                si.arrivalIndices = Object.values(session.players).map(player => player.arrivalIndex);
-                                si.countdown = null;
-
-                                // Does this player have control?
-                                hasControl = (session.playerControl == si.playerId);
-
-                                if ((currentStatus == 'waiting') & (!initSession)) {
-                                    initSession = true;
-                                    sessionStarted = false;
-                                    si.sessionId = thisSession;
-                                    si.sessionIndex = session.sessionIndex;
-                                    si.arrivalIndex = session.players[si.playerId].arrivalIndex;
-                                    numPlayersBefore = si.numPlayers;
-                                    si.status = 'waitingRoomStarted';
-                                    si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
-                                    recordSessionEvent( si );
-                                    mpg.joinedWaitingRoom( si );                                   
-                                } else if ((currentStatus == 'active') & (!sessionStarted)) {
-                                    initSession = true;
-                                    sessionStarted = true;
-                                    si.sessionId = thisSession;
-                                    si.sessionIndex = session.sessionIndex;
-                                    si.arrivalIndex = session.players[si.playerId].arrivalIndex;
-                                    numPlayersBefore = si.numPlayers;
-                                    si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
-                                    
-
-                                    if (mpg.sessionConfig.exitDelayWaitingRoom==0) {
-                                        si.status = 'sessionStarted';
-                                        recordSessionEvent( si );
-                                        startSession(); // Can start the session without delay
-                                    } else {
-                                        // Delay the start of entering the session
-                                        let remainingSeconds = mpg.sessionConfig.exitDelayWaitingRoom;
-
-                                        intervalId = setInterval(() => {
-                                            if (remainingSeconds > 0) {
-                                                si.status = 'waitingRoomCountdown';
-                                                si.countdown = remainingSeconds;
-                                                mpg.updateWaitingRoom( si )
-                                                remainingSeconds--;
-                                            } else {
-                                                clearInterval(intervalId); 
-                                                si.status = 'sessionStarted';
-                                                recordSessionEvent( si );
-                                                startSession();
-                                            }
-                                        }, 1000);
-                                    }
-                                    
-                                } else if (si.numPlayers !== numPlayersBefore) {
-                                    numPlayersBefore = si.numPlayers;
-                                    if (currentStatus == 'waiting') {
-                                        si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
-                                        recordSessionEvent( si );
-                                        mpg.updateWaitingRoom( si );
-                                    }
-                                    if (currentStatus == 'active') {
-                                        si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
-                                        if (si.status == 'waitingRoomCountdown') {
-                                            // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
-                                            // ...
-                                        } else {
-                                            recordSessionEvent( si );                                        
-                                            mpg.updateSession( si );
-
-                                            // Check if the number of players is below the minimum
-                                            if (si.numPlayers < mpg.sessionConfig.minPlayersNeeded) {
-                                                if (mpg.sessionConfig.maxDurationBelowMinPlayersNeeded == 0) {
-                                                    // Leave session immediately
-                                                    si.sessionErrorCode = 3;
-                                                    si.sessionErrorMsg = 'Number of players fell below minimum needed';
-                                                    recordSessionEvent( si );
-                                                    leaveSession();
-                                                } else if (hasControl) {
-                                                    // Initiate a timer countdown
-                                                    console.log('Starting timer to end session....');
-                                                    endSessionTimerId = setTimeout(() => {
-                                                        console.log('Ending session....');
-                                                        si.sessionErrorCode = 3;
-                                                        si.sessionErrorMsg = 'Number of players fell below minimum needed';
-                                                        recordSessionEvent( si );
-                                                        leaveSession();
-                                                    }, mpg.sessionConfig.maxDurationBelowMinPlayersNeeded * 1000 );
-                                                }
-                                            }  else {
-                                                // Clear any timers that were active
-                                                clearTimeout(endSessionTimerId);
-                                            }                                          
-                                        }
-                                        
-                                    }
-                                }
-
-                                if (session.playerControl !== playerControlBefore) {
-                                    if (!hasControl) {
-                                        mpg.losesControl();
-                                    } else {
-                                        mpg.gainedControl();
-                                    }
-                                    playerControlBefore = session.playerControl;
-                                }
-
-                                break;
-                            }
-                        }
-                    };
-                }
-
-            });
-
-
-            // Remove *other* clients who are disconnecting
-            onChildAdded(ref(db, `${mpg.studyId}/presence/`), (snapshot) => {
-                let thisPlayer = snapshot.key;
-                sessionUpdate('remove', thisPlayer).then(result => {
-                    remove(ref(db, `${mpg.studyId}/presence/${thisPlayer}`));
-                });
-            });
-
-            // Get the server time offset relative to the client time
-            offsetRef = ref(db, ".info/serverTimeOffset");
-            serverTimeOffset = 0;
-            onValue(offsetRef, (snap) => {
-                serverTimeOffset = snap.val();
-                myconsolelog(`Server offset time: ${serverTimeOffset}`);
-            });
-
-            myconsolelog("User is signed in. Player id=" + si.playerId);
-        });
-
     } else {
         // User is signed out
         myconsolelog("User is signed out");
@@ -242,6 +86,173 @@ await onAuthStateChanged(auth, (user) => {
 //------------------------------------------------------
 // Define some new functions we can use in other code
 //------------------------------------------------------
+// Set the session parameters for MPLIB
+export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbosityNow ) {
+    sessionConfig = sessionConfigNow;
+    studyId = studyIdNow;
+    verbosity = verbosityNow;
+
+    callback_sessionChange = funList.sessionChangeFunction;
+    callback_receiveStateChange = funList.receiveStateChangeFunction;
+    callback_evaluateUpdate = funList.evaluateUpdateFunction;
+
+
+    // for now, create a random id and not the id associated with the browser
+    // this facilitates testing of code on the same computer across different browser windows
+    //si.playerId = user.uid;
+    si.playerId = generateId();
+    //si.urlParams = getUrlParameters(); // add URL params in the sessionInfo
+
+    // Database reference to all session info  
+    sessionsRef = ref(db, `${studyId}/sessions`);
+
+    // This listener will detect all session changes (e.g. joining/leaving)
+    onValue(sessionsRef, (snapshot) => {
+        const whNode = snapshot.key;
+        const sessions = snapshot.val();
+        if (sessions !== null) {
+            var keys = Object.keys(sessions);
+            for (var i = 0; i < keys.length; i++) {
+                var thisSession = keys[i];
+                let session = sessions[thisSession];
+                if (session !== null) {
+                    // Does this session involve this player?
+                    if (si.playerId in session.players) {
+                        let currentStatus = session.status;
+                        si.numPlayers = Object.keys(session.players).length;
+                        si.playerIds = Object.keys( session.players );
+                        si.arrivalIndices = Object.values(session.players).map(player => player.arrivalIndex);
+                        si.countdown = null;
+
+                        // Does this player have control?
+                        hasControl = (session.playerControl == si.playerId);
+
+                        if ((currentStatus == 'waiting') & (!initSession)) {
+                            initSession = true;
+                            sessionStarted = false;
+                            si.sessionId = thisSession;
+                            si.sessionIndex = session.sessionIndex;
+                            si.arrivalIndex = session.players[si.playerId].arrivalIndex;
+                            numPlayersBefore = si.numPlayers;
+                            si.status = 'waitingRoomStarted';
+                            si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
+                            recordSessionEvent( si );
+                            // trigger callback 
+                            callback_sessionChange(si, 'joinedWaitingRoom' );                                   
+                        } else if ((currentStatus == 'active') & (!sessionStarted)) {
+                            initSession = true;
+                            sessionStarted = true;
+                            si.sessionId = thisSession;
+                            si.sessionIndex = session.sessionIndex;
+                            si.arrivalIndex = session.players[si.playerId].arrivalIndex;
+                            numPlayersBefore = si.numPlayers;
+                            si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
+                            
+
+                            if (sessionConfig.exitDelayWaitingRoom==0) {
+                                si.status = 'sessionStarted';
+                                recordSessionEvent( si );
+                                startSession(); // Can start the session without delay
+                            } else {
+                                // Delay the start of entering the session
+                                let remainingSeconds = sessionConfig.exitDelayWaitingRoom;
+
+                                intervalId = setInterval(() => {
+                                    if (remainingSeconds > 0) {
+                                        si.status = 'waitingRoomCountdown';
+                                        si.countdown = remainingSeconds;
+                                        callback_sessionChange( si , 'updateWaitingRoom' );
+                                        remainingSeconds--;
+                                    } else {
+                                        clearInterval(intervalId); 
+                                        si.status = 'sessionStarted';
+                                        recordSessionEvent( si );
+                                        startSession();
+                                    }
+                                }, 1000);
+                            }
+                            
+                        } else if (si.numPlayers !== numPlayersBefore) {
+                            numPlayersBefore = si.numPlayers;
+                            if (currentStatus == 'waiting') {
+                                si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
+                                recordSessionEvent( si );
+                                callback_sessionChange( si , 'updateWaitingRoom' );
+                            }
+                            if (currentStatus == 'active') {
+                                si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
+                                if (si.status == 'waitingRoomCountdown') {
+                                    // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
+                                    // ...
+                                } else {
+                                    recordSessionEvent( si );                                        
+                                    callback_sessionChange( si , 'updateOngoingSession' );
+
+                                    // Check if the number of players is below the minimum
+                                    if (si.numPlayers < sessionConfig.minPlayersNeeded) {
+                                        if (sessionConfig.maxDurationBelowMinPlayersNeeded == 0) {
+                                            // Leave session immediately
+                                            si.sessionErrorCode = 3;
+                                            si.sessionErrorMsg = 'Number of players fell below minimum needed';
+                                            recordSessionEvent( si );
+                                            leaveSession();
+                                        } else if (hasControl) {
+                                            // Initiate a timer countdown
+                                            console.log('Starting timer to end session....');
+                                            endSessionTimerId = setTimeout(() => {
+                                                console.log('Ending session....');
+                                                si.sessionErrorCode = 3;
+                                                si.sessionErrorMsg = 'Number of players fell below minimum needed';
+                                                recordSessionEvent( si );
+                                                leaveSession();
+                                            }, sessionConfig.maxDurationBelowMinPlayersNeeded * 1000 );
+                                        }
+                                    }  else {
+                                        // Clear any timers that were active
+                                        clearTimeout(endSessionTimerId);
+                                    }                                          
+                                }
+                                
+                            }
+                        }
+
+                        if (session.playerControl !== playerControlBefore) {
+                            if (!hasControl) {
+                                //mpg.losesControl();
+                            } else {
+                                //mpg.gainedControl();
+                            }
+                            playerControlBefore = session.playerControl;
+                        }
+
+                        break;
+                    }
+                }
+            };
+        }
+
+    });
+
+
+    // Remove *other* clients who are disconnecting
+    onChildAdded(ref(db, `${studyId}/presence/`), (snapshot) => {
+        let thisPlayer = snapshot.key;
+        sessionUpdate('remove', thisPlayer).then(result => {
+            remove(ref(db, `${studyId}/presence/${thisPlayer}`));
+        });
+    });
+
+    // Get the server time offset relative to the client time
+    offsetRef = ref(db, ".info/serverTimeOffset");
+    serverTimeOffset = 0;
+    onValue(offsetRef, (snap) => {
+        serverTimeOffset = snap.val();
+        myconsolelog(`Server offset time: ${serverTimeOffset}`);
+    });
+
+    myconsolelog("Player id=" + si.playerId);
+}
+
 
 // Function for player wanting to join a session
 export function joinSession() {
@@ -250,10 +261,10 @@ export function joinSession() {
             // Trigger function when session (active or waiting-room) could not be started
             si.sessionErrorCode = 1;
             si.sessionErrorMsg = 'Unable to join session';
-            mpg.endSession( si );
+            callback_sessionChange( si , 'endSession' );
         } else {
             // Now that we are in a session (active or waiting room), keep track of presence
-            presenceRef = ref(db, `${mpg.studyId}/presence/${si.playerId}`);
+            presenceRef = ref(db, `${studyId}/presence/${si.playerId}`);
 
             // Write a string to the presence state when this client loses connection
             onDisconnect(presenceRef).set("I disconnected!");
@@ -273,7 +284,7 @@ export function joinSession() {
 
                     si.sessionErrorCode = 2;
                     si.sessionErrorMsg = 'Session Disconnected';
-                    mpg.endSession( si );
+                    callback_sessionChange( si , 'endSession' );
                 }
             });
         }
@@ -302,19 +313,19 @@ export async function leaveSession() {
     });
 
     
-    mpg.endSession( si );
+    callback_sessionChange( si , 'endSession' );
 }
 
 // Function to start an active session (e.g. coming out of a waiting room, or when a single player can start a session)
 function startSession() {
     // Create a path to store the game state
-    stateRef = ref(db, `${mpg.studyId}/states/${si.sessionId}/`);
+    stateRef = ref(db, `${studyId}/states/${si.sessionId}/`);
 
     // Create a path to store all recorded events related to state changes 
-    recordEventsRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/events/`);
+    recordEventsRef = ref(db, `${studyId}/recordedData/${si.sessionId}/events/`);
 
     // Create a path to store all recorded player level information
-    recordPlayerRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);
+    recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);
     recordPlayerData( 'urlparams', getUrlParameters() );
     recordPlayerData( 'sessionInfo' , si );
 
@@ -327,7 +338,7 @@ function startSession() {
             const state = snapshot.val();
             if (state != null) {
                 // execute this function in the client game code 
-                mpg.receiveStateChange(nodeName, state, 'onChildChanged');
+                callback_receiveStateChange(nodeName, state, 'onChildChanged');
             }
         });
     } else {
@@ -339,7 +350,7 @@ function startSession() {
             const state = snapshot.val();
             if (state != null) {
                 // execute this function in the client game code 
-                mpg.receiveStateChange(nodeName, state, 'onValue');
+                callback_receiveStateChange(nodeName, state, 'onValue');
             }
         });
         */
@@ -352,7 +363,7 @@ function startSession() {
         const state = snapshot.val();
         if (state != null) {
             // execute this function in the client game code 
-            mpg.receiveStateChange(nodeName, state, 'onChildAdded');
+            callback_receiveStateChange(nodeName, state, 'onChildAdded');
         }
     });
 
@@ -362,12 +373,12 @@ function startSession() {
         const state = snapshot.val();
         if (state != null) {
             // execute this function in the client game code 
-            mpg.receiveStateChange(nodeName, state, 'onChildRemoved');
+            callback_receiveStateChange(nodeName, state, 'onChildRemoved');
         }
     });
 
     // Invoke function at client
-    mpg.startSession(si);
+    callback_sessionChange( si , 'startSession' );
 }
 
 // Handle event of player closing browser window
@@ -401,7 +412,7 @@ window.addEventListener('blur', function () {
 // Use these updates to speed up games with continuous movements where players' movements do
 // not conflict with each other
 export function updateStateDirect(path, newState, optionalParamSkipRecord = false ) {
-    let refNow = ref(db, `${mpg.studyId}/states/${si.sessionId}/${path}`);
+    let refNow = ref(db, `${studyId}/states/${si.sessionId}/${path}`);
     if (newState == null) {
         // If the proposed state is null, use that to remove the node (so we can clean up the gamestate for players who leave the game)
         remove(refNow).then( () => { recordEventData( path, newState, optionalParamSkipRecord )});
@@ -417,7 +428,7 @@ export function updateStateDirect(path, newState, optionalParamSkipRecord = fals
 
 function recordEventData(path, state, skipRecord ) {
     // Are we recording the data?
-    if ((mpg.sessionConfig.recordData) && (!skipRecord)) {
+    if ((sessionConfig.recordData) && (!skipRecord)) {
         let returnResult = {
             s: state,
             t: serverTimestamp(),
@@ -432,9 +443,9 @@ function recordEventData(path, state, skipRecord ) {
 
 function recordSessionEvent( si ) {
     // Are we recording the data?
-    if (mpg.sessionConfig.recordData) {
+    if (sessionConfig.recordData) {
         // Create a path to store all recorded gamestates   
-        let recordSessionRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/session/`);
+        let recordSessionRef = ref(db, `${studyId}/recordedData/${si.sessionId}/session/`);
 
         let returnResult = {
             sessionInfo: si,
@@ -448,7 +459,7 @@ function recordSessionEvent( si ) {
 
 function recordPlayerData( field, value ) {
     // Are we recording the data?
-    if (mpg.sessionConfig.recordData) {
+    if (sessionConfig.recordData) {
         let returnResult = {
             [field]: value,
         };    
@@ -459,7 +470,7 @@ function recordPlayerData( field, value ) {
 
 // The updateStateTransaction function uses a transaction to address concurrency issues (i.e., multiple players all making moves at the same time).
 export async function updateStateTransaction(path, action, actionArgs) {
-    let refNow = ref(db, `${mpg.studyId}/states/${si.sessionId}/${path}`);
+    let refNow = ref(db, `${studyId}/states/${si.sessionId}/${path}`);
 
     /* The code below uses the runTranaction function fromthe realtime database SDK that has some unexpected behavior. For example,
    when it first run, the currentState will either be "NULL" or some previous cached value that is unrelated to the current proposedMove.
@@ -476,7 +487,7 @@ export async function updateStateTransaction(path, action, actionArgs) {
 */
     return runTransaction(refNow, (state) => {
         // Check whether the action is allowed given the current game state
-        const actionResult = mpg.evaluateUpdate(path, state, action, actionArgs);
+        const actionResult = callback_evaluateUpdate(path, state, action, actionArgs);
         let isAllowed = actionResult.isAllowed;
         let newState = actionResult.newState;
         if (isAllowed) {
@@ -498,7 +509,7 @@ export async function updateStateTransaction(path, action, actionArgs) {
             myconsolelog(`Transaction successful: ${action} ${actionArgs}`);
 
             // Are we recording the data?
-            if (mpg.sessionConfig.recordData) {
+            if (sessionConfig.recordData) {
                 let newState = result.snapshot.val();
                 let returnResult = {
                     s: newState,
@@ -554,7 +565,7 @@ async function sessionUpdate(action, thisPlayer) {
                         off(stateRef); // remove the listener for game state
                         remove( stateRef ); // delete the state
 
-                    } else if ((mpg.sessionConfig.allowReplacements) && ((mpg.sessionConfig.maxHoursSession === 0) || (hoursElapsed < mpg.sessionConfig.maxHoursSession))) {
+                    } else if ((sessionConfig.allowReplacements) && ((sessionConfig.maxHoursSession === 0) || (hoursElapsed < sessionConfig.maxHoursSession))) {
                         // If replacemens are allowed for session and there is time remaining to add players ....
                         // Check if we can move a waiting person to move into this session.....
                         let sessions = currentState;
@@ -591,7 +602,7 @@ async function sessionUpdate(action, thisPlayer) {
 
                                 // What is the new status of the session (where we moved the player to)?
                                 numP = numP + 1;
-                                if (numP >= mpg.sessionConfig.minPlayersNeeded) {
+                                if (numP >= sessionConfig.minPlayersNeeded) {
                                     // Does this turn the session into active?
                                     if (currentState[sessionIdThis].status == 'waiting') {
                                         currentState[sessionIdThis].status = "active";
@@ -638,9 +649,9 @@ async function sessionUpdate(action, thisPlayer) {
                 let hoursElapsed = (estimatedServerTime - sessionStartTime) / (1000 * 60 * 60);
 
                 // Check if the maximum hours limit has not been exceeded
-                if ((mpg.sessionConfig.maxHoursSession === 0) || (hoursElapsed < mpg.sessionConfig.maxHoursSession)) {
+                if ((sessionConfig.maxHoursSession === 0) || (hoursElapsed < sessionConfig.maxHoursSession)) {
                     let numP = Object.keys(session.players || {}).length;
-                    if (numP < mpg.sessionConfig.maxPlayersNeeded) {
+                    if (numP < sessionConfig.maxPlayersNeeded) {
                         proposedSessionId = sortedSessionKeys[i];
 
                         // Count total number of players who have ever joined
@@ -658,7 +669,7 @@ async function sessionUpdate(action, thisPlayer) {
 
                         // Do we have quorum to start the session?
                         numP = numP + 1;
-                        if (numP >= mpg.sessionConfig.minPlayersNeeded) {
+                        if (numP >= sessionConfig.minPlayersNeeded) {
                             // Does this turn the session into active?
                             if (currentState[proposedSessionId].status == 'waiting') {
                                 currentState[proposedSessionId].status = "active";
@@ -690,7 +701,7 @@ async function sessionUpdate(action, thisPlayer) {
             // Create a new session if there was no room in existing sessions and we haven't reached the maximum parallel sessions
             if (!joined) {
                 let numSessions = sortedSessionKeys.length;
-                if ((mpg.sessionConfig.maxParallelSessions == 0) || (numSessions < mpg.sessionConfig.maxParallelSessions)) {
+                if ((sessionConfig.maxParallelSessions == 0) || (numSessions < sessionConfig.maxParallelSessions)) {
                     let newSessionRef = push(sessionsRef);
                     proposedSessionId = newSessionRef.key;
                     let playerData1 = {
@@ -712,7 +723,7 @@ async function sessionUpdate(action, thisPlayer) {
 
                     // Can we get started with one player?
                     let numP = 1;
-                    if (numP >= mpg.sessionConfig.minPlayersNeeded) {
+                    if (numP >= sessionConfig.minPlayersNeeded) {
                         currentState[proposedSessionId].status = "active";
                         // Assign the start time for each player
                         let players = currentState[proposedSessionId].players;
@@ -780,9 +791,9 @@ async function sessionUpdate(action, thisPlayer) {
         
         // Are we recording the session data?
         /*
-        if (mpg.sessionConfig.recordData) {
+        if (sessionConfig.recordData) {
             // Database reference to all recorded data about sessions   
-            sessionsDataRef = ref(db, `${mpg.studyId}/recordedData/${si.sessionId}/sessions//sessionInfo`);
+            sessionsDataRef = ref(db, `${studyId}/recordedData/${si.sessionId}/sessions//sessionInfo`);
 
             // Create a new child under session data
             let newDataRef = push(sessionsDataRef);
@@ -867,7 +878,7 @@ function getUrlParameters() {
 }
 
 function myconsolelog(message) {
-    if (mpg.verbosity > 1) {
+    if (verbosity > 1) {
         console.log(message);
     }
 }

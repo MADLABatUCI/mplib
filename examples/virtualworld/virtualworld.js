@@ -8,6 +8,7 @@
 // the Firebase MultiPlayer library
 // -------------------------------------
 import {
+    initializeMPLIB,
     joinSession,
     leaveSession,
     updateStateDirect,
@@ -20,10 +21,10 @@ import {
 //       Session configuration
 // -------------------------------------
 // studyId is the name of the root node we create in the realtime database
-export const studyId = 'virtualworld'; 
+const studyId = 'virtualworld'; 
 
 // Configuration setting for the session
-export const sessionConfig = {
+const sessionConfig = {
     minPlayersNeeded: 1, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
     maxPlayersNeeded: 10, // Maximum number of players allowed in a session
     maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
@@ -33,10 +34,19 @@ export const sessionConfig = {
     maxHoursSession: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
     recordData: false // Record all data?  
 };
-export const verbosity = 2;
+const verbosity = 2;
 
 // Allow URL parameters to update these default parameters
 updateConfigFromUrl( sessionConfig );
+
+// List names of the callback functions that are used in this code (so MPLIB knows which functions to trigger)
+let funList = { 
+    sessionChangeFunction: sessionChange,
+    receiveStateChangeFunction: receiveStateChange,
+};
+
+// Set the session configuration for MPLIB
+initializeMPLIB( sessionConfig , studyId , funList, verbosity );
 
 // -------------------------------------
 //       Globals
@@ -106,7 +116,7 @@ leaveButton.addEventListener('click', function () {
 // --------------------------------------------------------------------------------------
 
 // Function to receive state changes from Firebase (broadcast by other players)
-export function receiveStateChange(nodeName, newState, typeChange ) {
+function receiveStateChange(nodeName, newState, typeChange ) {
     // typeChange can be the following:
     //  'onChildChanged'
     //  'onChildAdded'
@@ -136,22 +146,6 @@ export function receiveStateChange(nodeName, newState, typeChange ) {
     
 }
 
-// Function triggered by a call to "updateStateTransaction" to evaluate if the proposed action is valid
-// If "updateStateTransaction" is not called, and all updates are done through "updateStateDirect", there is no 
-// need for this function
-export function evaluateUpdate( path, state, action, actionArgs ) {
-    let isAllowed = false;
-    let newState = null;
-
-    // .... insert your code to update isAllowed and newState
-
-    let evaluationResult = { isAllowed, newState };
-    return evaluationResult;
-}
-
-
-//document.addEventListener('DOMContentLoaded', function () {
-    
 // --------------------------------------------------------------------------------------
 //   Virtual world code using A-frame
 // --------------------------------------------------------------------------------------
@@ -388,105 +382,80 @@ function showInstructions() {
 }
   
 // --------------------------------------------------------------------------------------
-//   Handle waiting room and session events triggered by MPLIB
-//   These callback functions are required, but the contents can be empty and left inconsequential  
-//   (note: all timestamps are server-side expressed in milliseconds since the Unix Epoch)
+//   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
 // This callback function is triggered when a waiting room starts
-export function joinedWaitingRoom(sessionInfo) {
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'block';
+function sessionChange(sessionInfo, typeChange) {
+    // typeChange can be the following
+    // 'joinedWaitingRoom'
+    // 'updateWaitingRoom'
+    // 'startSession'
+    // 'updateOngoingSession'
+    // 'endSession'
 
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let numPlayers = sessionInfo.numPlayers;
-    let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
+   let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
+   let numPlayers = sessionInfo.numPlayers;
+   let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
+   messageWaitingRoom.innerText = str2;
 
-    messageWaitingRoom.innerText = str2;
+   if (typeChange === 'joinedWaitingRoom') {
+        instructionsScreen.style.display = 'none';
+        waitingRoomScreen.style.display = 'block';
+   }
+
+   if (typeChange === 'updateWaitingRoom') {
+        instructionsScreen.style.display = 'none';
+        waitingRoomScreen.style.display = 'block';
+        if (sessionInfo.status === 'waitingRoomCountdown') {
+            str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+            messageWaitingRoom.innerText = str2;
+        }
+   }
+
+   if (typeChange === 'startSession') {
+        instructionsScreen.style.display = 'none';
+        waitingRoomScreen.style.display = 'none';
+        gameScreen.style.display = 'block';
+        scene.style.visibility = 'visible';
+        scene.style.display = 'block';
+        leaveButton.style.display = 'block';
+        
+        let dateString = timeStr(sessionInfo.sessionStartedAt);
+        let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
+        myconsolelog( str );
+
+        let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+        //messageGame.innerHTML = str2;
+
+        // Add this player's avatar 
+        addSelf( sessionInfo.arrivalIndex ); 
+
+        tick();
+   }
+
+   if (typeChange === 'updateOngoingSession') {
+       // handle deletion of character?
+   }
+
+   if (typeChange === 'endSession') {
+        instructionsScreen.style.display = 'none';
+        waitingRoomScreen.style.display = 'none';
+        gameScreen.style.display = 'none';
+        finishScreen.style.display = 'block';
+
+        scene.style.visibility = 'hidden';
+        scene.style.display = 'none';
+
+        leaveButton.style.display = 'none';
+
+        if (sessionInfo.sessionErrorCode != 0) {
+            messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
+        } else {
+            messageFinish.innerHTML = `<p>You have completed the session.</p>`;
+        }
+   }
 }
-
-// This callback function is triggered when waiting room is still ongoing, but number of players waiting changes
-export function updateWaitingRoom(sessionInfo) {
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'block';
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let numPlayers = sessionInfo.numPlayers;
-    let str2;
-    if (sessionInfo.status == 'waitingRoomCountdown') {
-        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
-    }  else {       
-        str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
-    } 
-    messageWaitingRoom.innerText = str2;
-}
-
-// This callback function is triggered when the session starts (when enough players have gathered, or when only a single player is needed)
-export function startSession(sessionInfo) {
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'none';
-    gameScreen.style.display = 'block';
-
-    scene.style.visibility = 'visible';
-    scene.style.display = 'block';
-
-    leaveButton.style.display = 'block';
-    
-    let dateString = timeStr(sessionInfo.sessionStartedAt);
-    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
-    myconsolelog( str );
-
-    let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    //messageGame.innerHTML = str2;
-
-    // Add this player's avatar 
-    addSelf( sessionInfo.arrivalIndex ); 
-
-    tick();
-}
-
-// This callback function is triggered when session is active, but number of players changes
-export function updateSession(sessionInfo) {    
-    let dateString = timeStr(sessionInfo.sessionStartedAt);
-    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
-    myconsolelog( str );
-
-    let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    //messageGame.innerHTML = str2;
-}
-
-export function endSession( sessionInfo ) {
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'none';
-    gameScreen.style.display = 'none';
-    finishScreen.style.display = 'block';
-
-    scene.style.visibility = 'hidden';
-    scene.style.display = 'none';
-
-    leaveButton.style.display = 'none';
-
-    if (sessionInfo.sessionErrorCode != 0) {
-        messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
-    } else {
-        messageFinish.innerHTML = `<p>You have completed the session.</p>`;
-    }
-    
-}
-
-// This callback function is triggered when this client gains control over dynamic objects
-export function gainedControl() {
-    myconsolelog('Client gained control');
-}
-
-// This  callback function is triggered when this client loses control over dynamic objects
-// e.g., when client's browser loses focus
-export function losesControl() {
-    myconsolelog('Client loses control');
-}
-
-// -------------------------------------------------------------------------------------
-//       Handle events triggered by MPLIB related to changes in the game state
-// -------------------------------------------------------------------------------------
 
 
 // -------------------------------------
