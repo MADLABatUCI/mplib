@@ -47,8 +47,6 @@ let numPlayersBefore = 0;
 let focusStatus = 'focus';
 let playerControlBefore = '';
 let intervalId; // interval timer for the waiting room countdown;
-let endSessionTimerId;
-
 
 let callback_sessionChange;
 let callback_receiveStateChange;
@@ -59,6 +57,7 @@ const firebaseApp = initializeApp(firebasempConfig);
 const auth = getAuth(firebaseApp);
 const db = getDatabase(firebaseApp);
 
+/*
 // Use anonymous signin
 await signInAnonymously(auth)
     .then(() => {
@@ -81,7 +80,7 @@ await onAuthStateChanged(auth, (user) => {
         myconsolelog("User is signed out");
     }
 });
-
+*/
 
 //------------------------------------------------------
 // Define some new functions we can use in other code
@@ -190,27 +189,13 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbos
 
                                     // Check if the number of players is below the minimum
                                     if (si.numPlayers < sessionConfig.minPlayersNeeded) {
-                                        if (sessionConfig.maxDurationBelowMinPlayersNeeded == 0) {
-                                            // Leave session immediately
-                                            si.sessionErrorCode = 3;
-                                            si.sessionErrorMsg = 'Number of players fell below minimum needed';
-                                            recordSessionEvent( si );
-                                            leaveSession();
-                                        } else if (hasControl) {
-                                            // Initiate a timer countdown
-                                            console.log('Starting timer to end session....');
-                                            endSessionTimerId = setTimeout(() => {
-                                                console.log('Ending session....');
-                                                si.sessionErrorCode = 3;
-                                                si.sessionErrorMsg = 'Number of players fell below minimum needed';
-                                                recordSessionEvent( si );
-                                                leaveSession();
-                                            }, sessionConfig.maxDurationBelowMinPlayersNeeded * 1000 );
-                                        }
-                                    }  else {
-                                        // Clear any timers that were active
-                                        clearTimeout(endSessionTimerId);
-                                    }                                          
+                                        // Leave session immediately
+                                        si.sessionErrorCode = 3;
+                                        si.sessionErrorMsg = 'Number of players fell below minimum needed';
+                                        recordSessionEvent( si );
+                                        leaveSession();
+                                        
+                                    }                                         
                                 }
                                 
                             }
