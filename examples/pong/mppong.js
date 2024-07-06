@@ -39,6 +39,7 @@ const verbosity = 2;
 let funList = { 
     sessionChangeFunction: sessionChange,
     receiveStateChangeFunction: receiveStateChange,
+    removePlayerStateFunction: removePlayerState
 };
 
 // Set the session configuration for MPLIB
@@ -554,6 +555,10 @@ function receiveStateChange( nodeName, state, typeChange ) {
     }
 }
 
+// Function triggered when this client closes the window and the player needs to be removed from the state 
+function removePlayerState( playerId ) {
+
+}
 
 // --------------------------------------------------------------------------------------
 //   Handle any session change relating to the waiting room or ongoing session 

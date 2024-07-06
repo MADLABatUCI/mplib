@@ -49,6 +49,7 @@ let intervalId; // interval timer for the waiting room countdown;
 let callback_sessionChange;
 let callback_receiveStateChange;
 let callback_evaluateUpdate;
+let callback_removePlayerState; 
 
 // Initialize App
 const firebaseApp = initializeApp(firebasempConfig);
@@ -70,7 +71,7 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbos
     callback_sessionChange = funList.sessionChangeFunction;
     callback_receiveStateChange = funList.receiveStateChangeFunction;
     callback_evaluateUpdate = funList.evaluateUpdateFunction;
-
+    callback_removePlayerState = funList.removePlayerStateFunction;
 
     // Create a random id for the player; this id is across browser windows on the same client  
     // this facilitates testing of code on the same computer across different browser windows
@@ -264,6 +265,16 @@ export function joinSession() {
 export async function leaveSession() {
     // Run a transaction to remove this player
     sessionUpdate('remove', si.playerId).then(result => {
+        // remove this player from the game state
+        callback_removePlayerState( si.playerId );
+
+        // Remove the disconnect listener....
+        off(presenceRef);
+        off(connectedRef);
+
+        // remove the listener for game state
+        off(stateRef);
+
         // If this transaction is successful...
         si.sessionStarted = false;
         si.sessionInitiated = false;
@@ -272,13 +283,6 @@ export async function leaveSession() {
         si.status = 'leaveSession';
         playerControlBefore = '';
         hasControl = false;
-
-        // Remove the disconnect listener....
-        off(presenceRef);
-        off(connectedRef);
-
-        // remove the listener for game state
-        off(stateRef);
     });
 
     
@@ -339,7 +343,7 @@ window.addEventListener('beforeunload', function (event) {
     if (si.sessionInitiated) {
         // Only remove this player when the session started
         sessionUpdate('remove', si.playerId);
-        //mpg.removePlayerGameState(si.playerId);
+        callback_removePlayerState( si.playerId );
     }
 });
 

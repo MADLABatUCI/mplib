@@ -44,7 +44,8 @@ updateConfigFromUrl( sessionConfig );
 let funList = { 
     sessionChangeFunction: sessionChange,
     receiveStateChangeFunction: receiveStateChange,
-    evaluateUpdateFunction: evaluateUpdate
+    evaluateUpdateFunction: evaluateUpdate,
+    removePlayerStateFunction: removePlayerState
   };
 
 // Set the session parameters for MPLIB
@@ -106,6 +107,11 @@ function evaluateUpdate( path, state, action, actionArgs ) {
 
     let evaluationResult = { isAllowed, newState };
     return evaluationResult;
+}
+
+// Function triggered when this client closes the window and the player needs to be removed from the state 
+function removePlayerState( playerId ) {
+
 }
 
 // --------------------------------------------------------------------------------------

@@ -42,6 +42,7 @@ updateConfigFromUrl( sessionConfig );
 let funList = { 
     sessionChangeFunction: sessionChange,
     receiveStateChangeFunction: receiveStateChange,
+    removePlayerStateFunction: removePlayerState
 };
 
 // Set the session configuration for MPLIB
@@ -58,6 +59,7 @@ let angleOffset = 135; // angle needed for character to face in direction camera
 let newScale = { x: 0.75, y: 0.75, z: 0.75 };
 
 let id;
+let si;
 
 let climits = {
     minX: -10,
@@ -143,6 +145,16 @@ function receiveStateChange(nodeName, newState, typeChange ) {
     }
 
     
+}
+
+// Function triggered when this client closes the window and the player needs to be removed from the state 
+function removePlayerState( playerId ) {
+    //removeCharacter( playerId );
+
+    // Send a null state to this player in the database, which removes the database entry
+    id = `Player${si.arrivalIndex}`;
+    let newState = null;
+    updateStateDirect( id, newState);
 }
 
 // --------------------------------------------------------------------------------------
@@ -393,6 +405,7 @@ function sessionChange(sessionInfo, typeChange) {
     // 'updateOngoingSession'
     // 'endSession'
 
+   si = sessionInfo;
    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
    let numPlayers = sessionInfo.numPlayers;
    let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
