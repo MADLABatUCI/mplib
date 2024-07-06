@@ -28,14 +28,14 @@ let si = {
     countdown: null,
     sessionStartedAt: null,
     sessionErrorCode: 0,
-    sessionErrorMsg: ''
+    sessionErrorMsg: '',
+    sessionInitiated: false,
+    sessionStarted: false
 };
 
 let sessionConfig;
 let studyId;
 let verbosity;
-let initSession = false; // determines whether a session has be initiated 
-let sessionStarted = false;
 let stateRef;
 let presenceRef, connectedRef;
 let sessionsRef, recordEventsRef, recordPlayerRef;
@@ -133,9 +133,9 @@ function triggerSessionCallback( session , sessionId ) {
     si.countdown = null;
 
     
-    if ((currentStatus == 'waiting') & (!initSession)) {
-        initSession = true;
-        sessionStarted = false;
+    if ((currentStatus == 'waiting') & (!si.sessionInitiated)) {
+        si.sessionInitiated = true;
+        si.sessionStarted = false;
         si.sessionId = sessionId;
         si.sessionIndex = session.sessionIndex;
         si.arrivalIndex = session.players[si.playerId].arrivalIndex;
@@ -145,9 +145,9 @@ function triggerSessionCallback( session , sessionId ) {
         recordSessionEvent( si );
         // trigger callback 
         callback_sessionChange(si, 'joinedWaitingRoom' );                                   
-    } else if ((currentStatus == 'active') & (!sessionStarted)) {
-        initSession = true;
-        sessionStarted = true;
+    } else if ((currentStatus == 'active') & (!si.sessionStarted)) {
+        si.sessionInitiated = true;
+        si.sessionStarted = true;
         si.sessionId = sessionId;
         si.sessionIndex = session.sessionIndex;
         si.arrivalIndex = session.players[si.playerId].arrivalIndex;
@@ -245,8 +245,8 @@ export function joinSession() {
                     myconsolelog("Connected to firebase");
                 } else {
                     myconsolelog("Disconnected from firebase");
-                    initSession = false;
-                    sessionStarted = false;
+                    si.sessionInitiated = false;
+                    si.sessionStarted = false;
                     si.sessionId = undefined;
                     si.sessionIndex = undefined;
                     hasControl = false;
@@ -265,8 +265,8 @@ export async function leaveSession() {
     // Run a transaction to remove this player
     sessionUpdate('remove', si.playerId).then(result => {
         // If this transaction is successful...
-        sessionStarted = false;
-        initSession = false;
+        si.sessionStarted = false;
+        si.sessionInitiated = false;
         si.sessionId = undefined;
         si.sessionIndex = undefined;
         si.status = 'leaveSession';
@@ -336,7 +336,7 @@ function startSession() {
 
 // Handle event of player closing browser window
 window.addEventListener('beforeunload', function (event) {
-    if (initSession) {
+    if (si.sessionInitiated) {
         // Only remove this player when the session started
         sessionUpdate('remove', si.playerId);
         //mpg.removePlayerGameState(si.playerId);
@@ -346,7 +346,7 @@ window.addEventListener('beforeunload', function (event) {
 // When a client's browser comes into focus, it becomes eligible for object control
 window.addEventListener('focus', function () {
     focusStatus = 'focus';
-    if (initSession) {
+    if (si.sessionInitiated) {
         myconsolelog('Player is in focus');
         sessionUpdate('focus', si.playerId);
     }
@@ -355,7 +355,7 @@ window.addEventListener('focus', function () {
 // When a client's browser is out of focus, it becomes ineligible for object control
 window.addEventListener('blur', function () {
     focusStatus = 'blur';
-    if (initSession) {
+    if (si.sessionInitiated) {
         myconsolelog('Player has lost focus');
         sessionUpdate('blur', si.playerId);
     }
@@ -588,9 +588,9 @@ async function sessionUpdate(action, thisPlayer) {
             }
         }
 
-        if ((action == 'join') & (!initSession)) {
+        if ((action == 'join') & (!si.sessionInitiated)) {
             allowed = true;
-            let joined = false; // a local variable (not to be confused with initSession)
+            let joined = false; // a local variable (not to be confused with si.sessionInitiated)
             let sessions = currentState;
             let sortedSessionKeys = sortSessions(sessions);
 
