@@ -22,7 +22,7 @@ import {
 // -------------------------------------
 //       Session configuration
 // -------------------------------------
-// studyId is the name of the root node we create in the realtime database
+// studyId is the name of the root node created in the realtime database
 const studyId = 'skeleton'; 
 
 // Configuration setting for the session
@@ -35,12 +35,12 @@ let sessionConfig = {
     maxHoursSession: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
     recordData: false // Record all data?  
 };
-const verbosity = 2;
+const verbosity = 1; // 0: no writing to console; 1: write output to console
 
 // Allow URL parameters to update these default parameters
 updateConfigFromUrl( sessionConfig );
 
-// List names of the callback functions that are used in this code (so MPLIB knows which functions to trigger)
+// Pass names of the callback functions in this code to MPLIB
 let funList = { 
     sessionChangeFunction: sessionChange,
     receiveStateChangeFunction: receiveStateChange,
@@ -48,7 +48,7 @@ let funList = {
     removePlayerStateFunction: removePlayerState
   };
 
-// Set the session parameters for MPLIB
+// Set the session parameters and callback functions for MPLIB
 initializeMPLIB( sessionConfig , studyId , funList, verbosity );
 
 
@@ -114,12 +114,7 @@ function removePlayerState( playerId ) {
 
 }
 
-// --------------------------------------------------------------------------------------
-//   Handle any change in session relating to the waiting room or ongoing session 
-//   (note: all timestamps are server-side expressed in milliseconds since the Unix Epoch)
-// --------------------------------------------------------------------------------------
-
-// This callback function is triggered when a waiting room starts
+// This callback function is triggered when a session change occurs
 function sessionChange(sessionInfo, typeChange) {
    // typeChange can be the following
    // 'joinedWaitingRoom'
@@ -129,17 +124,19 @@ function sessionChange(sessionInfo, typeChange) {
    // 'endSession'
 
    playerId = sessionInfo.playerId; // the playerId for this client
-   let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-   let numPlayers = sessionInfo.numPlayers;
+   let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
+   let numPlayers = sessionInfo.numPlayers; // the current number of players
    let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
    messageWaitingRoom.innerText = str2;
 
    if (typeChange === 'joinedWaitingRoom') {
+        // switch screens from instruction to waiting room
         instructionsScreen.style.display = 'none';
         waitingRoomScreen.style.display = 'block';
    }
 
    if (typeChange === 'updateWaitingRoom') {
+        // switch screens from instruction to waiting room
         instructionsScreen.style.display = 'none';
         waitingRoomScreen.style.display = 'block';
         if (sessionInfo.status === 'waitingRoomCountdown') {
@@ -148,23 +145,26 @@ function sessionChange(sessionInfo, typeChange) {
         }
    }
 
-   if (typeChange === 'startSession') {
+   if ((typeChange === 'startSession') ||  (typeChange === 'updateOngoingSession')) {
         instructionsScreen.style.display = 'none';
         waitingRoomScreen.style.display = 'none';
         gameScreen.style.display = 'block';
 
-        let dateString = timeStr(sessionInfo.sessionStartedAt);
-        let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
-        myconsolelog( str );
+        if (typeChange === 'startSession') {
+           let dateString = timeStr(sessionInfo.sessionStartedAt);
+           let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
+           myconsolelog( str );
+        }
 
-        let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+        let str2 = `<p>Session ID: ${ sessionInfo.sessionId}$</p><p>Number of players: ${ sessionInfo.numPlayers}</p>`;
+        for (let i=0; i<numPlayers; i++) {
+            let playerNow = sessionInfo.playerIds[i];
+            str2 += `Player arrival position ${sessionInfo.arrivalIndices[i]}: ${playerNow} ${ playerId===playerNow ? '(you)' : '' } <br>`;
+        }
         messageGame.innerHTML = str2;
    }
 
-   if (typeChange === 'updateOngoingSession') {
-        let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-        messageGame.innerHTML = str2;
-   }
+
 
    if (typeChange === 'endSession') {
         instructionsScreen.style.display = 'none';
