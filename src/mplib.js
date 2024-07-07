@@ -254,12 +254,7 @@ export function joinSession() {
                     myconsolelog("Connected to firebase");
                 } else {
                     myconsolelog("Disconnected from firebase");
-                    si.sessionInitiated = false;
-                    si.sessionStarted = false;
-                    si.sessionId = undefined;
-                    si.sessionIndex = undefined;
-                    hasControl = false;
-
+                    si.status = 'leftSession';
                     si.sessionErrorCode = 2;
                     si.sessionErrorMsg = 'Session Disconnected';
                     callback_sessionChange( si , 'endSession' );
@@ -530,12 +525,14 @@ async function sessionUpdate(action, thisPlayer) {
                         remove( sessionRef ); // and remove this session
                         */
 
+                        /*
                         off( presenceRef); // remove the callback that sets "I disconnected"
 
                         if (stateRef) {
                            off(stateRef); // remove the listener for game state (if one was defined)
                            remove( stateRef ); // delete the state
                         }
+                        */
 
                     } else if ((sessionConfig.allowReplacements) && ((sessionConfig.maxHoursSession === 0) || (hoursElapsed < sessionConfig.maxHoursSession))) {
                         // If replacemens are allowed for session and there is time remaining to add players ....
