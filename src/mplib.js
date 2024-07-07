@@ -491,254 +491,32 @@ export async function updateStateTransaction(path, action, actionArgs) {
 
 // Coordinate session updates (players leaving/adding)
 async function sessionUpdate(action, thisPlayer) {
-
-    let proposedSessionId;
-    return runTransaction(sessionsRef, (currentState) => {
+    return runTransaction(sessionsRef, (allSessions) => {
         let allowed = false;
 
+        // ------------------------------------------------------
+        //    Attempt to remove player from session
+        // ------------------------------------------------------
         if (action == 'remove') {
-            allowed = true;
-            if (currentState !== null) {
-
-                // Find the session associated with this player
-                let sessionIdThis = getSessionByPlayerId(currentState, thisPlayer);
-                if (sessionIdThis === null) {
-                    // Player could not be find, so cannot be deleted from state
-                    allowed = false;
-                } else {
-                    delete currentState[sessionIdThis].players[thisPlayer];
-
-                    let session = currentState[sessionIdThis];
-                    let estimatedServerTime = Date.now() + serverTimeOffset;
-                    let sessionStartTime = (session.sessionStartedAt == 0) ? estimatedServerTime : session.sessionStartedAt;
-                    let hoursElapsed = (estimatedServerTime - sessionStartTime) / (1000 * 60 * 60);
-
-                    // If no players left, delete the session
-                    let numP = Object.keys(currentState[sessionIdThis].players).length;
-                    if (numP == 0) {
-                        delete currentState[sessionIdThis];
-
-                        // Remove this session
-                        /*
-                        let sessionRef = ref(db, `${studyId}/sessions/${si.sessionId}/`);
-                        off( sessionsRef ); // remove the listener for all sessions changes
-                        remove( sessionRef ); // and remove this session
-                        */
-
-                        /*
-                        off( presenceRef); // remove the callback that sets "I disconnected"
-
-                        if (stateRef) {
-                           off(stateRef); // remove the listener for game state (if one was defined)
-                           remove( stateRef ); // delete the state
-                        }
-                        */
-
-                    } else if ((sessionConfig.allowReplacements) && ((sessionConfig.maxHoursSession === 0) || (hoursElapsed < sessionConfig.maxHoursSession))) {
-                        // If replacemens are allowed for session and there is time remaining to add players ....
-                        // Check if we can move a waiting person to move into this session.....
-                        let sessions = currentState;
-                        let sortedSessionKeys = sortSessions(sessions);
-
-                        for (let i = 0; i < sortedSessionKeys.length; i++) {
-                            let sessionIdOther = sortedSessionKeys[i];
-                            let sessionOther = sessions[sessionIdOther];
-                            let playersOther = Object.keys(sessionOther.players || {});
-                            let numPlayersOther = playersOther.length;
-                            let statusOther = sessionOther.status;
-                            if ((sessionIdOther !== sessionIdThis) && (numPlayersOther > 0) && (statusOther == 'waiting')) {
-                                // Pick the first player in this other session that is still waiting
-                                //let playerIdOther = playersOther[0];
-
-                                // Pick the player who has been waiting the longest
-                                let sortedPlayerIds = sortPlayersTime(sessionOther.players);
-                                let playerIdOther = sortedPlayerIds[0];
-
-                                // Copy over the data
-                                let playerData1 = { joinedWaitingRoomAt: sessionOther.players[playerIdOther].joinedWaitingRoomAt, joinedGameAt: 0 };
-
-                                // Delete player from the session it is associated with
-                                delete sessionOther.players[playerIdOther];
-
-                                numPlayersOther = numPlayersOther - 1;
-                                if (numPlayersOther == 0) {
-                                    // There are no more players in this session, so delete session
-                                    delete currentState[sessionIdOther];
-                                }
-
-                                // move player data over                           
-                                currentState[sessionIdThis].players[playerIdOther] = playerData1;
-
-                                // What is the new status of the session (where we moved the player to)?
-                                numP = numP + 1;
-                                if (numP >= sessionConfig.minPlayersNeeded) {
-                                    // Does this turn the session into active?
-                                    if (currentState[sessionIdThis].status == 'waiting') {
-                                        currentState[sessionIdThis].status = "active";
-
-                                        // Assign the start time for each player
-                                        let players = currentState[sessionIdThis].players;
-                                        Object.keys(players).forEach(function (key) {
-                                            players[key].joinedGameAt = serverTimestamp();
-                                        });
-
-                                        // Set the start time for the session
-                                        currentState[sessionIdThis].sessionStartedAt = serverTimestamp();
-                                    } else {
-                                        // Just assign the start time for this player
-                                        currentState[sessionIdThis].players[playerIdOther].joinedGameAt = serverTimestamp();
-                                    }
-                                }
-
-                                break;
-                            }
-                        }
-
-                        // Determine who should have control....
-                        //let session = currentState[sessionIdThis];
-                        let sortedPlayersIds = sortPlayersStatus(session.players);
-                        let playerControl = sortedPlayersIds[0];
-                        currentState[sessionIdThis].playerControl = playerControl;
-                    }
-                }
-            }
+            [ allowed , allSessions ] = removePlayerSession( allSessions , thisPlayer );     
         }
 
+        // ------------------------------------------------------
+        //    Attempt to join the session
+        // ------------------------------------------------------
         if ((action == 'join') & (!si.sessionInitiated)) {
-            allowed = true;
-            let joined = false; // a local variable (not to be confused with si.sessionInitiated)
-            let sessions = currentState;
-            let sortedSessionKeys = sortSessions(sessions);
-
-            // Try to join an existing session
-            for (let i = 0; i < sortedSessionKeys.length; i++) {
-                let session = sessions[sortedSessionKeys[i]];
-                let estimatedServerTime = Date.now() + serverTimeOffset;
-                let sessionStartTime = (session.sessionStartedAt == 0) ? estimatedServerTime : session.sessionStartedAt;
-                let hoursElapsed = (estimatedServerTime - sessionStartTime) / (1000 * 60 * 60);
-
-                // Check if the maximum hours limit has not been exceeded
-                if ((sessionConfig.maxHoursSession === 0) || (hoursElapsed < sessionConfig.maxHoursSession)) {
-                    let numP = Object.keys(session.players || {}).length;
-                    if (numP < sessionConfig.maxPlayersNeeded) {
-                        proposedSessionId = sortedSessionKeys[i];
-
-                        // Count total number of players who have ever joined
-                        let count = currentState[proposedSessionId].numPlayersEverJoined;
-                        count = count + 1;
-                        currentState[proposedSessionId].numPlayersEverJoined = count;
-
-                        // Create player status
-                        let playerData1 = {
-                            joinedWaitingRoomAt: serverTimestamp(), joinedGameAt: 0, status: focusStatus, numBlurred: 0,
-                            arrivalIndex: count
-                        };
-                        currentState[proposedSessionId].players[thisPlayer] = playerData1;
-                        joined = true;
-
-                        // Do we have quorum to start the session?
-                        numP = numP + 1;
-                        if (numP >= sessionConfig.minPlayersNeeded) {
-                            // Does this turn the session into active?
-                            if (currentState[proposedSessionId].status == 'waiting') {
-                                currentState[proposedSessionId].status = "active";
-
-                                // Assign the start time for each player
-                                let players = currentState[proposedSessionId].players;
-                                Object.keys(players).forEach(function (key) {
-                                    players[key].joinedGameAt = serverTimestamp();
-                                });
-
-                                // Set the start time for the session
-                                currentState[proposedSessionId].sessionStartedAt = serverTimestamp();
-                            } else {
-                                // Just assign the start time for this player
-                                currentState[proposedSessionId].players[thisPlayer].joinedGameAt = serverTimestamp();
-                            }
-                        }
-
-                        // Determine who should have control....
-                        let sortedPlayersIds = sortPlayersStatus(session.players);
-                        let playerControl = sortedPlayersIds[0];
-                        currentState[proposedSessionId].playerControl = playerControl;
-
-                        break;
-                    }
-                }
-            }
-
-            // Create a new session if there was no room in existing sessions and we haven't reached the maximum parallel sessions
-            if (!joined) {
-                let numSessions = sortedSessionKeys.length;
-                if ((sessionConfig.maxParallelSessions == 0) || (numSessions < sessionConfig.maxParallelSessions)) {
-                    let newSessionRef = push(sessionsRef);
-                    proposedSessionId = newSessionRef.key;
-                    let playerData1 = {
-                        joinedWaitingRoomAt: serverTimestamp(), joinedGameAt: 0, status: focusStatus, numBlurred: 0,
-                        arrivalIndex: 1
-                    };
-                    let playerData2 = { [thisPlayer]: playerData1 };
-                    let saveData = {
-                        players: playerData2, status: "waiting",
-                        waitingRoomStartedAt: serverTimestamp(), sessionStartedAt: 0, sessionIndex: numSessions + 1,
-                        numPlayersEverJoined: 1
-                    };
-
-                    if (currentState === null) {
-                        currentState = { [proposedSessionId]: saveData };
-                    } else {
-                        currentState[proposedSessionId] = saveData;
-                    }
-
-                    // Can we get started with one player?
-                    let numP = 1;
-                    if (numP >= sessionConfig.minPlayersNeeded) {
-                        currentState[proposedSessionId].status = "active";
-                        // Assign the start time for each player
-                        let players = currentState[proposedSessionId].players;
-                        Object.keys(players).forEach(function (key) {
-                            players[key].joinedGameAt = serverTimestamp();
-                        });
-
-                        // Set the start time for the session
-                        currentState[proposedSessionId].sessionStartedAt = serverTimestamp();
-                    }
-
-                    // Set control
-                    currentState[proposedSessionId].playerControl = thisPlayer;
-
-
-                } else {
-                    allowed = false;
-                }
-            }
+            [ allowed, allSessions ] = joinPlayerSession( allSessions , thisPlayer ); 
         }
 
-        if (((action == 'focus') || (action == 'blur')) && (currentState !== null)) {
-            allowed = true;
-
-            // Find the session associated with this player
-            let sessionIdThis = getSessionByPlayerId(currentState, thisPlayer);
-            if (sessionIdThis === null) {
-                // Player could not be found, so cannot change focus state
-                allowed = false;
-            } else {
-                currentState[sessionIdThis].players[thisPlayer].status = action;
-
-                if (action == 'blur') {
-                    currentState[sessionIdThis].players[thisPlayer].numBlurred++;
-                }
-
-                // Determine who should have control....
-                let session = currentState[sessionIdThis];
-                let sortedPlayersIds = sortPlayersStatus(session.players);
-                let playerControl = sortedPlayersIds[0];
-                currentState[sessionIdThis].playerControl = playerControl;
-            }
+        // ------------------------------------------------------
+        //    Attempt to change the focus
+        // ------------------------------------------------------
+        if (((action == 'focus') || (action == 'blur')) && (allSessions !== null)) {
+            [ allowed , allSessions ] = determineControlSession( allSessions, thisPlayer, action );    
         }
 
         if (allowed) {
-            return currentState;
+            return allSessions;
         } else {
             return undefined;
         }
@@ -761,6 +539,242 @@ async function sessionUpdate(action, thisPlayer) {
     }).catch(error => {
         myconsolelog("Transaction failed with error: ", error);
     });
+}
+
+
+function removePlayerSession( allSessions , thisPlayer ) {
+    let allowed = true;
+    if (allSessions !== null) {
+        // Find the session associated with this player
+        let sessionIdThis = getSessionByPlayerId(allSessions, thisPlayer);
+        if (sessionIdThis === null) {
+            // Player could not be find, so cannot be deleted from state
+            allowed = false;
+        } else {
+            delete allSessions[sessionIdThis].players[thisPlayer];
+
+            let session = allSessions[sessionIdThis];
+            let estimatedServerTime = Date.now() + serverTimeOffset;
+            let sessionStartTime = (session.sessionStartedAt == 0) ? estimatedServerTime : session.sessionStartedAt;
+            let hoursElapsed = (estimatedServerTime - sessionStartTime) / (1000 * 60 * 60);
+
+            // If no players left, delete the session
+            let numP = Object.keys(allSessions[sessionIdThis].players).length;
+            if (numP == 0) {
+                // this will produce a null outcome for this session which then be deleted if transaction is successful
+                delete allSessions[sessionIdThis];
+
+            } else if ((sessionConfig.allowReplacements) && ((sessionConfig.maxHoursSession === 0) || (hoursElapsed < sessionConfig.maxHoursSession))) {
+                // If replacemens are allowed for session and there is time remaining to add players ....
+                // Check if we can move a waiting person to move into this session.....
+                let sessions = allSessions;
+                let sortedSessionKeys = sortSessions(sessions);
+
+                for (let i = 0; i < sortedSessionKeys.length; i++) {
+                    let sessionIdOther = sortedSessionKeys[i];
+                    let sessionOther = sessions[sessionIdOther];
+                    let playersOther = Object.keys(sessionOther.players || {});
+                    let numPlayersOther = playersOther.length;
+                    let statusOther = sessionOther.status;
+                    if ((sessionIdOther !== sessionIdThis) && (numPlayersOther > 0) && (statusOther == 'waiting')) {
+                        // Pick the first player in this other session that is still waiting
+                        //let playerIdOther = playersOther[0];
+
+                        // Pick the player who has been waiting the longest
+                        let sortedPlayerIds = sortPlayersTime(sessionOther.players);
+                        let playerIdOther = sortedPlayerIds[0];
+
+                        // Copy over the data
+                        let playerData1 = { joinedWaitingRoomAt: sessionOther.players[playerIdOther].joinedWaitingRoomAt, joinedGameAt: 0 };
+
+                        // Delete player from the session it is associated with
+                        delete sessionOther.players[playerIdOther];
+
+                        numPlayersOther = numPlayersOther - 1;
+                        if (numPlayersOther == 0) {
+                            // There are no more players in this session, so delete session
+                            delete allSessions[sessionIdOther];
+                        }
+
+                        // move player data over                           
+                        allSessions[sessionIdThis].players[playerIdOther] = playerData1;
+
+                        // What is the new status of the session (where we moved the player to)?
+                        numP = numP + 1;
+                        if (numP >= sessionConfig.minPlayersNeeded) {
+                            // Does this turn the session into active?
+                            if (allSessions[sessionIdThis].status == 'waiting') {
+                                allSessions[sessionIdThis].status = "active";
+
+                                // Assign the start time for each player
+                                let players = allSessions[sessionIdThis].players;
+                                Object.keys(players).forEach(function (key) {
+                                    players[key].joinedGameAt = serverTimestamp();
+                                });
+
+                                // Set the start time for the session
+                                allSessions[sessionIdThis].sessionStartedAt = serverTimestamp();
+                            } else {
+                                // Just assign the start time for this player
+                                allSessions[sessionIdThis].players[playerIdOther].joinedGameAt = serverTimestamp();
+                            }
+                        }
+
+                        break;
+                    }
+                }
+
+                // Determine who should have control....
+                //let session = allSessions[sessionIdThis];
+                let sortedPlayersIds = sortPlayersStatus(session.players);
+                let playerControl = sortedPlayersIds[0];
+                allSessions[sessionIdThis].playerControl = playerControl;
+            }
+        }
+    }
+
+    return [ allowed , allSessions ];
+}
+
+function joinPlayerSession(  allSessions , thisPlayer ) {
+    let allowed = true;
+    let proposedSessionId;
+    let joined = false; // a local variable (not to be confused with si.sessionInitiated)
+    //let sessions = allSessions;
+    //let sortedSessionKeys = sortSessions(sessions);
+
+    let sortedSessionKeys = sortSessions(allSessions);
+
+    // Try to join an existing session
+    for (let i = 0; i < sortedSessionKeys.length; i++) {
+        //let session = sessions[sortedSessionKeys[i]];
+        let session = allSessions[sortedSessionKeys[i]];
+        let estimatedServerTime = Date.now() + serverTimeOffset;
+        let sessionStartTime = (session.sessionStartedAt == 0) ? estimatedServerTime : session.sessionStartedAt;
+        let hoursElapsed = (estimatedServerTime - sessionStartTime) / (1000 * 60 * 60);
+
+        // Check if the maximum hours limit has not been exceeded
+        if ((sessionConfig.maxHoursSession === 0) || (hoursElapsed < sessionConfig.maxHoursSession)) {
+            let numP = Object.keys(session.players || {}).length;
+            if (numP < sessionConfig.maxPlayersNeeded) {
+                proposedSessionId = sortedSessionKeys[i];
+
+                // Count total number of players who have ever joined
+                let count = allSessions[proposedSessionId].numPlayersEverJoined;
+                count = count + 1;
+                allSessions[proposedSessionId].numPlayersEverJoined = count;
+
+                // Create player status
+                let playerData1 = {
+                    joinedWaitingRoomAt: serverTimestamp(), joinedGameAt: 0, status: focusStatus, numBlurred: 0,
+                    arrivalIndex: count
+                };
+                allSessions[proposedSessionId].players[thisPlayer] = playerData1;
+                joined = true;
+
+                // Do we have quorum to start the session?
+                numP = numP + 1;
+                if (numP >= sessionConfig.minPlayersNeeded) {
+                    // Does this turn the session into active?
+                    if (allSessions[proposedSessionId].status == 'waiting') {
+                        allSessions[proposedSessionId].status = "active";
+
+                        // Assign the start time for each player
+                        let players = allSessions[proposedSessionId].players;
+                        Object.keys(players).forEach(function (key) {
+                            players[key].joinedGameAt = serverTimestamp();
+                        });
+
+                        // Set the start time for the session
+                        allSessions[proposedSessionId].sessionStartedAt = serverTimestamp();
+                    } else {
+                        // Just assign the start time for this player
+                        allSessions[proposedSessionId].players[thisPlayer].joinedGameAt = serverTimestamp();
+                    }
+                }
+
+                // Determine who should have control....
+                let sortedPlayersIds = sortPlayersStatus(session.players);
+                let playerControl = sortedPlayersIds[0];
+                allSessions[proposedSessionId].playerControl = playerControl;
+
+                break;
+            }
+        }
+    }
+
+    // Create a new session if there was no room in existing sessions and we haven't reached the maximum parallel sessions
+    if (!joined) {
+        let numSessions = sortedSessionKeys.length;
+        if ((sessionConfig.maxParallelSessions == 0) || (numSessions < sessionConfig.maxParallelSessions)) {
+            let newSessionRef = push(sessionsRef);
+            proposedSessionId = newSessionRef.key;
+            let playerData1 = {
+                joinedWaitingRoomAt: serverTimestamp(), joinedGameAt: 0, status: focusStatus, numBlurred: 0,
+                arrivalIndex: 1
+            };
+            let playerData2 = { [thisPlayer]: playerData1 };
+            let saveData = {
+                players: playerData2, status: "waiting",
+                waitingRoomStartedAt: serverTimestamp(), sessionStartedAt: 0, sessionIndex: numSessions + 1,
+                numPlayersEverJoined: 1
+            };
+
+            if (allSessions === null) {
+                allSessions = { [proposedSessionId]: saveData };
+            } else {
+                allSessions[proposedSessionId] = saveData;
+            }
+
+            // Can we get started with one player?
+            let numP = 1;
+            if (numP >= sessionConfig.minPlayersNeeded) {
+                allSessions[proposedSessionId].status = "active";
+                // Assign the start time for each player
+                let players = allSessions[proposedSessionId].players;
+                Object.keys(players).forEach(function (key) {
+                    players[key].joinedGameAt = serverTimestamp();
+                });
+
+                // Set the start time for the session
+                allSessions[proposedSessionId].sessionStartedAt = serverTimestamp();
+            }
+
+            // Set control
+            allSessions[proposedSessionId].playerControl = thisPlayer;
+
+
+        } else {
+            allowed = false;
+        }
+    }
+
+    return [ allowed, allSessions ];
+}
+
+function determineControlSession(  allSessions , thisPlayer, action ) {
+    let allowed = true;
+    
+    // Find the session associated with this player
+    let sessionIdThis = getSessionByPlayerId(allSessions, thisPlayer);
+    if (sessionIdThis === null) {
+        // Player could not be found, so cannot change focus state
+        allowed = false;
+    } else {
+        allSessions[sessionIdThis].players[thisPlayer].status = action;
+
+        if (action == 'blur') {
+            allSessions[sessionIdThis].players[thisPlayer].numBlurred++;
+        }
+
+        // Determine who should have control....
+        let session = allSessions[sessionIdThis];
+        let sortedPlayersIds = sortPlayersStatus(session.players);
+        let playerControl = sortedPlayersIds[0];
+        allSessions[sessionIdThis].playerControl = playerControl;
+    }
+
+    return [ allowed , allSessions ];
 }
 
 // Sort sessions by session index such that sessions with lower indices are always given preference
