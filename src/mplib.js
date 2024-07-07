@@ -14,30 +14,17 @@ import {
 
 export let hasControl = false; // variable exposed to the client code 
 
-// Initialize the session information that the client will see
+// si contains the session information that the client will see
 let si = {
-    status: '',
-    numPlayers: 0, 
-    playerId: null,
-    playerIds: [], 
-    sessionId: null, 
-    sessionIndex: null, 
-    arrivalIndex: null, 
-    arrivalIndices: [],
-    waitingRoomStartedAt: null, 
-    countdown: null,
-    sessionStartedAt: null,
-    sessionErrorCode: 0,
-    sessionErrorMsg: '',
-    sessionInitiated: false,
-    sessionStarted: false
+    playerId: generateId(), // Create a random id for the player; this id is across browser windows on the same client 
 };
+//initSessionInfo();
 
 let sessionConfig;
 let studyId;
 let verbosity;
 let stateRef;
-let presenceRef, connectedRef;
+let presenceRef, connectedRef, otherPresenceRef;
 let sessionsRef, recordEventsRef, recordPlayerRef;
 let offsetRef;
 let serverTimeOffset = 0; // default
@@ -73,9 +60,8 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbos
     callback_evaluateUpdate = funList.evaluateUpdateFunction;
     callback_removePlayerState = funList.removePlayerStateFunction;
 
-    // Create a random id for the player; this id is across browser windows on the same client  
-    // this facilitates testing of code on the same computer across different browser windows
-    si.playerId = generateId();
+    // Reset the session info information
+    initSessionInfo();
     myconsolelog("Player id=" + si.playerId);
 
     initializeFirebaseListeners();
@@ -107,8 +93,9 @@ function initializeFirebaseListeners() {
         }
     });
 
-    // Remove *other* clients who are disconnecting
-    onChildAdded(ref(db, `${studyId}/presence/`), (snapshot) => {
+    // Set up a listener that removes *other* clients who are disconnecting
+    otherPresenceRef = ref(db, `${studyId}/presence/`);
+    onChildAdded( otherPresenceRef, (snapshot) => {
         let thisPlayer = snapshot.key;
         sessionUpdate('remove', thisPlayer).then(result => {
             remove(ref(db, `${studyId}/presence/${thisPlayer}`));
@@ -124,9 +111,30 @@ function initializeFirebaseListeners() {
     });
 }
 
+function initSessionInfo() {
+    // Initialize the session information but keep the playerId that was set 
+    let playerId = si.playerId; 
+    si = {
+        status: '',
+        numPlayers: 0, 
+        playerId,
+        playerIds: [], 
+        sessionId: null, 
+        sessionIndex: null, 
+        arrivalIndex: null, 
+        arrivalIndices: [],
+        waitingRoomStartedAt: null, 
+        countdown: null,
+        sessionStartedAt: null,
+        sessionErrorCode: 0,
+        sessionErrorMsg: '',
+        sessionInitiated: false,
+        sessionStarted: false
+    };    
+}
+
 function triggerSessionCallback( session , sessionId ) {
     // Process the information in "session" and trigger the appropriate callbacks on the client 
-
     let currentStatus = session.status; // either 'waiting' or 'active'
     si.numPlayers = Object.keys(session.players).length;
     si.playerIds = Object.keys( session.players );
@@ -271,22 +279,19 @@ export async function leaveSession() {
         // Remove the disconnect listener....
         off(presenceRef);
         off(connectedRef);
+        off(otherPresenceRef);
 
         // remove the listener for game state
         off(stateRef);
 
-        // If this transaction is successful...
-        si.sessionStarted = false;
-        si.sessionInitiated = false;
-        si.sessionId = undefined;
-        si.sessionIndex = undefined;
-        si.status = 'leaveSession';
-        playerControlBefore = '';
-        hasControl = false;
-    });
+        // remove the listener for session changes
+        off(sessionsRef);
 
-    
-    callback_sessionChange( si , 'endSession' );
+        // If this transaction is successful...
+        si.status = 'leftSession';
+
+        callback_sessionChange( si , 'endSession' );
+    });  
 }
 
 // Function to start an active session (e.g. coming out of a waiting room, or when a single player can start a session)
