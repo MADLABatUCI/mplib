@@ -126,6 +126,7 @@ function sessionChange(sessionInfo, typeChange) {
    playerId = sessionInfo.playerId; // the playerId for this client
    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
    let numPlayers = sessionInfo.numPlayers; // the current number of players
+   
    let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
    messageWaitingRoom.innerText = str2;
 
@@ -156,11 +157,32 @@ function sessionChange(sessionInfo, typeChange) {
            myconsolelog( str );
         }
 
-        let str2 = `<p>Session ID: ${ sessionInfo.sessionId}$</p><p>Number of players: ${ sessionInfo.numPlayers}</p>`;
+        let str2 = `<p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+        str2 += `<p>Player ID: ${ sessionInfo.playerId}$</p>`;
+
+        str2 += `<p>Current number of players (${ sessionInfo.numPlayers} total):`;
         for (let i=0; i<numPlayers; i++) {
             let playerNow = sessionInfo.playerIds[i];
-            str2 += `Player arrival position ${sessionInfo.arrivalIndices[i]}: ${playerNow} ${ playerId===playerNow ? '(you)' : '' } <br>`;
+            str2 += `<br>Arrival #${sessionInfo.arrivalIndices[i]},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
         }
+        str2 += `</p>`;
+
+        let allPlayersEver = Object.keys( sessionInfo.allPlayersEver );
+        let numPlayersEver = allPlayersEver.length;
+        str2 += `<p>History of players ever joined this session (${numPlayersEver} total):`;
+        for (let i=0; i<numPlayersEver; i++) {
+            let playerNow = allPlayersEver[i];
+            str2 += `<br>Arrival #${sessionInfo.allPlayersEver[playerNow].arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+            str2 += ` Arrival time: ${timeStr(sessionInfo.allPlayersEver[playerNow].joinedGameAt)}`;
+            if (sessionInfo.allPlayersEver[playerNow].leftGameAt != 0) {
+                str2 += ` Finish time: ${timeStr(sessionInfo.allPlayersEver[playerNow].leftGameAt)}`;
+            }
+            if (sessionInfo.allPlayersEver[playerNow].finishStatus) {
+                str2 += ` Finish status: ${sessionInfo.allPlayersEver[playerNow].finishStatus}`;
+            }
+        }
+        str2 += `</p>`;
+
         messageGame.innerHTML = str2;
    }
 

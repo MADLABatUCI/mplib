@@ -267,7 +267,6 @@ function removePlayerState( playerId ) {
 //   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
-// This callback function is triggered when a waiting room starts
 function sessionChange(sessionInfo, typeChange) {
     // typeChange can be the following
     // 'joinedWaitingRoom'
@@ -313,14 +312,7 @@ function sessionChange(sessionInfo, typeChange) {
     }
 
     if (typeChange === 'updateOngoingSession') {
-        if (sessionInfo.numPlayers == 1) {
-            instructionsScreen.style.display = 'none';
-            waitingRoomScreen.style.display = 'none';
-            gameScreen.style.display = 'none';
-            finishScreen.style.display = 'block';
-            messageFinish.innerHTML = `<p>The other player has left the session.</p>`;
-            leaveSession();
-        }
+
     }
 
     if (typeChange === 'endSession') {
@@ -329,8 +321,12 @@ function sessionChange(sessionInfo, typeChange) {
         gameScreen.style.display = 'none';
         finishScreen.style.display = 'block';
 
-        if (sessionInfo.sessionErrorCode != 0) {
-            messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
+        // Check if any of the players terminated the session abnormally
+        let players = sessionInfo.allPlayersEver; 
+        const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
+
+        if (hasAbnormalStatus) {
+            messageFinish.innerHTML = `<p>Session ended abnormally by another player disconnecting or closing a window</p>`;
         } else {
             messageFinish.innerHTML = `<p>You have completed the session.</p>`;
         }
