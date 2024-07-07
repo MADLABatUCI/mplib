@@ -15,7 +15,6 @@ import {
     hasControl
 } from "/mplib/src/mplib.js";
 
-
 // -------------------------------------
 //       Game configuration
 // -------------------------------------
@@ -24,7 +23,7 @@ export const studyId = 'groupestimation';
 // Configuration setting for the session
 export const sessionConfig = {
     minPlayersNeeded: 2, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
-    maxPlayersNeeded: 5, // Maximum number of players allowed in a session
+    maxPlayersNeeded: 2, // Maximum number of players allowed in a session
     maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
     allowReplacements: false, // Allow replacing any players who leave an ongoing session?
     exitDelayWaitingRoom: 3, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
@@ -37,15 +36,42 @@ export const verbosity = 2;
 // Allow URL parameters to update these default parameters
 updateConfigFromUrl( sessionConfig );
 
-//console.log("THIS IS MY OWN TEST: ", sessionInfo.numPlayers)
-
 // -------------------------------------
 //       Globals
 // -------------------------------------
+let playerN;
 let gameState;
 let thisSession;
-let emptyPlace = ' '; // this character represents the absence of a token and a lack of a winner (it is tempting to use "null" for this state, but firebase does not store any null variables and this can complicate the coding)
+let playerNEstimate = -1; // save a players no guess as -1, once a player has submitted a guess (> 0) then do something about it
 let delayStartNewGame = 3000;
+let emptyPlace = ' '; // this character represents the absence of a token and a lack of a winner (it is tempting to use "null" for this state, but firebase does not store any null variables and this can complicate the coding)
+
+let playerMapppings = {
+    player2: {
+        1: 2,
+        3: 3,
+        4: 4,
+        5: 5
+    },
+    player3: {
+        1: 2,
+        2: 3,
+        4: 4,
+        5: 5 
+    },
+    player4: {
+        1: 2,
+        2: 3,
+        3: 4,
+        5: 5
+    },
+    player5: {
+        1: 2,
+        2: 3,
+        3: 4,
+        4: 5
+    }
+};
 
 // -------------------------------------
 //       Graphics handles
@@ -56,7 +82,9 @@ let gameScreen = document.getElementById('gameScreen');
 let messageWaitingRoom = document.getElementById('messageWaitingRoom');
 let messageGame = document.getElementById('messageGame');
 let messageFinish = document.getElementById('messageFinish');
-const cells = document.querySelectorAll('.cell');
+const submitGuess = document.getElementById('estimation-button');
+let playerID = document.getElementById('playerID');
+let messageToPlayer = document.getElementById('messageToPlayer');
 let instructionsText = document.getElementById('instructionText');
 let turnText = document.getElementById('turnMessage');
 
@@ -80,6 +108,245 @@ leaveButton.addEventListener('click', function () {
     leaveSession(); // call the library function to leave a session. This then triggers the local function endSession
 });
 
+submitGuess.addEventListener('click', function () {
+    /*
+        Event listener for what happens when the client submits their estimate.
+    */
+    //  Ensure that the estimate value is valid
+    if (_ensureClientEstimateIsValid()){
+        //  Update the display of the client guess (remove input box and place text of estimate)
+        _updateClientEstimateView();
+        //  Update the client player avater to be green
+        _updatePlayerAvatar(1);
+        //  Update the message to the client player
+        messageToPlayer.innerText = 'estimate received...waiting for other estimates'
+        //  Update the database to now include the client's estimate
+        updateStateDirect(
+            'state/player' + playerN,
+            {
+                estimate: Number(playerNEstimate)
+            }
+        );
+        //_updatePlayerAvatar(4);
+    } else {
+        console.log("still listening...");
+    };
+    
+    /*const placeIndex = cell.getAttribute('data-index');      
+    updateStateTransaction('state', 'placeToken', placeIndex ).then(success => {  
+        if (!success) {
+            console.log( 'You cannot make this move');
+        }
+    });*/
+});
+
+// -------------------------------------
+//      Game logic and UI
+// -------------------------------------
+function _ensureClientEstimateIsValid() {
+    /*
+        Ensure that the current client has submitted an estimate > 0.
+    */
+
+    // Get the estimate element
+    let clientEstimate = document.getElementById('player1-guess');
+    console.log("Client Estimate", clientEstimate);
+    // Ensure the estimate is valid
+    //  If the estimate is valid return true
+    //  If the estimate is invalid show a message to the client
+    //      stating that it is invalid
+    if (clientEstimate.value > 0) {
+        console.log("valid estimate");
+        playerNEstimate = clientEstimate.value;
+        return true;
+    } else {
+        console.log("invalid estimate");
+        return false;
+    };
+};
+
+function _ensureOtherPlayerEstimateIsValid(n) {
+    /*
+        Ensure that the estimate from another player has submitted and estimate > 0.
+    */
+
+    console.log("Game State", gameState);
+    // Get the estimate of playerN
+    let playerEstimate = gameState['player' + n].estimate;
+
+    console.log("Player " + n + " Estimate", playerEstimate);
+    // Ensure the estimate is valid
+    //  If the estimate is valid return true
+    //  If the estimate is invalid show a message to the client
+    //      stating that it is invalid
+    if (playerEstimate > 0) {
+        console.log("valid estimate for player " + n);
+        return true;
+    } else {
+        console.log("invalid estimate for player " + n);
+        return false;
+    };
+};
+
+function _updateClientEstimateView() {
+    /*
+        Update the estimate view for the current client once they have submitted
+        their own estimate.
+    */
+
+    // Get the estimate element
+    let clientEstimateInput = document.getElementById('player1-guess');
+    let clientEstimateText  = document.getElementById('player1-guess-text');
+
+    // Hide the [input] element
+    clientEstimateInput.style.display = "none";
+    clientEstimateText.innerText = clientEstimateInput.value;
+};
+
+function _updatePlayerEstimateView(n) {
+    /*
+        Update the estimate view for the another player once they have submitted
+        their own estimate.
+    */
+    let playerToUpdate;
+    let playerEstimate = gameState['player' + n].estimate;
+
+    // Get the estimate element
+    if (playerN === 1) {
+        playerToUpdate = n;
+    } else {
+        let thisMapping = playerMapppings['player' + playerN];
+        console.log(thisMapping);
+        playerToUpdate = thisMapping[n];
+        console.log(playerToUpdate);
+    }
+    let playerNudgeButton = document.getElementById('player' + playerToUpdate + '-nudge-button');
+    let playerEstimateText  = document.getElementById('player' + playerToUpdate + '-guess-text');
+    
+
+    // Hide the [input] element
+    playerNudgeButton.style.display = "none";
+    playerEstimateText.innerText = playerEstimate;
+
+    _updatePlayerAvatar(playerToUpdate);
+};
+
+function _updatePlayerAvatar(n) {
+    /*
+        Update Player N's avatar if they have made an estimate
+    */
+
+    // Get element responsible for player avatar colors
+    let root = document.querySelector(":root");
+
+    // Update the color
+    root.style.setProperty("--player" + n + "avatar-backgroundcolor", 'green');
+
+
+};
+
+function newGame() {
+    // Initialize a game
+    //let whoStarts;
+    let newState;
+
+    // If we have an existing game, we go to the next round
+    if (gameState) {
+        //whoStarts = gameState.playerStarted === 'O' ? 'X' : 'O'; // the player who didn't start last game now starts
+        newState = {
+            numberOfObjects: 100,
+            player1: {
+                estimate: playerNEstimate,
+            },
+            player2: {
+                estimate: playerNEstimate,
+            },
+            //currentPlayer: whoStarts, // who is starting this turn?
+            //playerStarted: whoStarts, // who started this game?
+            //firstArrival: gameState.firstArrival, // keep the assignments of first-arrived player
+            //winner: emptyPlace,
+            round: gameState.round + 1
+        };
+    } else {  // Otherwise, we start from scratch
+        //whoStarts = Math.random() < 0.5 ? 'X' : 'O'; // randomly assign whether "X" or "O" starts
+        newState = {
+            numberOfObjects: 100,
+            player1: {
+                estimate: playerNEstimate,
+            },
+            player2: {
+                estimate: playerNEstimate,
+            },
+            //currentPlayer: whoStarts, // who is starting this turn?
+            //playerStarted: whoStarts, // who started this game?
+            //firstArrival: Math.random() < 0.5 ? 'X' : 'O', // The assignment of the player who arrived first in the session
+            //winner: emptyPlace,
+            round: 1
+        };
+    }
+    
+    // Each player will attempt to initialize the game but only the first player (client) to 
+    // run this transaction will be able to initialize the state. We place the game state under the node 'state'
+    // as this will broadcast the entire gamestate to players (including /board, /currentPlayer, etc) 
+    updateStateTransaction( 'state' , 'initialize' , newState ).then(success => {
+        // Note that updates to the game state are not done in this conditional statement. If the transaction
+        // is successful, the state will be broadcast to all players and the "receiveUpdate" function can be
+        // used to update the local game state
+        if (!success) {
+            console.log( 'The game was already initialized');
+        } else {
+            console.log( 'The game is initialized by this player');
+        }
+    });
+}
+
+// Function to update the UI
+function updateUI() {
+    /*
+        Update the UI whenever the gameState has been updated.
+
+        Updates occur when:
+            - A player makes an estimate
+            - A player nudges another player
+    */
+    for (let i = 1; i <= 5; i++) {
+        console.log("updating ", i);
+        if (i === playerN) {
+            console.log("this is the current player number", i);
+        } else {
+            //  Ensure that the estimate value is valid
+            if (_ensureOtherPlayerEstimateIsValid(i)){
+                //  Update the display of the client guess (remove input box and place text of estimate)
+                _updatePlayerEstimateView(i);
+                //  Update the client player avater to be green
+                //_updatePlayerAvatar(1);
+            }
+        }
+    }
+    /*
+    gameState.board.forEach((value, placeIndex) => {
+        cells[placeIndex].innerText = value;
+    });
+
+    let str = '';
+    if ((gameState.winner === 'X') || (gameState.winner === 'O')) {
+        str = `${gameState.winner} wins!`;
+    } else if (gameState.winner === 'XO') {
+        str = 'Draw!';
+    } else {
+        // Is it this player's turn?
+        if (((thisSession.arrivalIndex===1) && (gameState.currentPlayer === gameState.firstArrival)) ||   
+            ((thisSession.arrivalIndex===2) && (gameState.currentPlayer !== gameState.firstArrival))) {
+            str = `You are player ${gameState.currentPlayer}. It is your turn...`
+        } else {
+            str = `Waiting for the other player...`
+        }
+    }
+
+    turnText.innerText = str;
+    */
+}
+
 
 // --------------------------------------------------------------------------------------
 //   Handle Events triggered by MPLIB
@@ -88,29 +355,30 @@ leaveButton.addEventListener('click', function () {
 // --------------------------------------------------------------------------------------
 // Function to receive state changes from Firebase
 export function receiveStateChange(nodeName, newState, typeChange ) {
-    /*if (nodeName === 'state') {
+    if (nodeName === 'state') {
         gameState = newState;
         updateUI();
 
+        /*
         if (gameState.winner !== emptyPlace) {
             setTimeout(function() {
                 // Propose a new game
                 newGame();
             }, delayStartNewGame );
-        }
-    }*/
+        }*/
+    }
 }
 
 
 export function evaluateUpdate( path, state, action, actionArgs ) {
-    /*let isAllowed = false;
+    let isAllowed = false;
     let newState = null;
 
     if ((action === 'initialize') && ((state === null) || state.winner !== emptyPlace)) {
         isAllowed = true;
         newState = actionArgs;
     }
-
+    /*
     if ((action === 'placeToken') && (state.winner === emptyPlace )) {
         // Is it this player's turn?
         if (((thisSession.arrivalIndex===1) && (state.currentPlayer === state.firstArrival)) ||   
@@ -140,9 +408,9 @@ export function evaluateUpdate( path, state, action, actionArgs ) {
             }        
         }
     }
-
+    */
     let actionResult = { isAllowed, newState };
-    return actionResult;*/
+    return actionResult;
 }
 
 
@@ -177,6 +445,9 @@ export function updateWaitingRoom(sessionInfo) {
 
 // This callback function is triggered when the session starts (when enough players have gathered, or when only a single player is needed)
 export function startSession(sessionInfo) {
+    // Assign playerUniqueID
+    // sessinoInfo.playerID
+    playerN = sessionInfo.arrivalIndex;
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
@@ -184,6 +455,7 @@ export function startSession(sessionInfo) {
     let dateString = timeStr(sessionInfo.sessionStartedAt);
     let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
     myconsolelog( str );
+    playerID.innerText = playerN;
 
     let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
     //messageGame.innerHTML = str2;

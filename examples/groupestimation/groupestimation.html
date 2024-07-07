@@ -80,6 +80,17 @@
             width: 25%;
             display: table-cell;
         }
+
+        :root{
+            --playeravatar-backgroundcolor: lightgray;
+            --player1avatar-backgroundcolor: black;
+            --player2avatar-backgroundcolor: lightgray;
+            --player3avatar-backgroundcolor: lightgray;
+            --player4avatar-backgroundcolor: lightgray;
+            --player5avatar-backgroundcolor: lightgray;
+            
+        }
+
         .person {
             margin: auto;
             position: relative;
@@ -95,7 +106,7 @@
             top: 75px;
             height: 50px;
             width: 130px;
-            border: 0px solid lightgrey;
+            border: 0px solid var(--playeravatar-backgroundcolor);
             border-radius: 45px 45px 0 0;
             border-width: 15px 15px 0px 15px;
         }
@@ -110,13 +121,37 @@
             height: 80px;
             width: 80px;
             border-radius: 50%;
-            border: 15px solid lightgrey;
+            border: 15px solid var(--playeravatar-backgroundcolor);
+        }
+        #player1:after {
+            border-color: var(--player1avatar-backgroundcolor);
+        }
+        #player1:before {
+            border-color: var(--player1avatar-backgroundcolor);
         }
         #player2:after {
-            border-color: green;
+            border-color: var(--player2avatar-backgroundcolor);
         }
         #player2:before {
-            border-color: green;
+            border-color: var(--player2avatar-backgroundcolor);
+        }
+        #player3:after {
+            border-color: var(--player3avatar-backgroundcolor);
+        }
+        #player3:before {
+            border-color: var(--player3avatar-backgroundcolor);
+        }
+        #player4:after {
+            border-color: var(--player4avatar-backgroundcolor);
+        }
+        #player4:before {
+            border-color: var(--player4avatar-backgroundcolor);
+        }
+        #player5:after {
+            border-color: var(--player5avatar-backgroundcolor);
+        }
+        #player5:before {
+            border-color: var(--player5avatar-backgroundcolor);
         }
         .guess {
             width: 80%;
@@ -169,25 +204,37 @@
             opacity: 0.7;
         }
 
-.jar-glossy-long{
-  width: 3%;
-  height: 20%;
-  border-radius: 2rem;
-  background: #ddfbff;
-  position: absolute;
-  bottom: 20%;
-  left: 5%;
-}
+            .jar-glossy-long{
+            width: 3%;
+            height: 20%;
+            border-radius: 2rem;
+            background: #ddfbff;
+            position: absolute;
+            bottom: 20%;
+            left: 5%;
+        }
 
-.jar-glossy-short{
-  width: 3%;
-  height: 5%;
-  border-radius: 2rem;
-  background: #ddfbff;
-  position: absolute;
-  bottom: 45%;
-  left: 5%;
-}
+        .jar-glossy-short{
+            width: 3%;
+            height: 5%;
+            border-radius: 2rem;
+            background: #ddfbff;
+            position: absolute;
+            bottom: 45%;
+            left: 5%;
+        }
+
+        input[type='number']::-webkit-inner-spin-button, 
+        input[type='number']::-webkit-outer-spin-button { 
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        #estimation-button {
+            width: 80%;
+            margin-top: 1em;
+        }
+
     </style>
 </head>
 
@@ -247,8 +294,21 @@
     </div>
     <div class="container" id="gameScreen" style="caret-color: transparent;"><!--display:none;">-->
         <h1>Guess the number of objects (<span id="numPlayers">X</span> players)</h1>
-        <div class="textturn" id="turnMessage">You are player <span id="playerID">X</span>: make your guess</div>
+        <div class="textturn" id="turnMessage">
+            You are Player
+            <span id="playerID"></span>:
+            <br />
+            <span id="messageToPlayer">make your guess</span>
+        </div>
         <div id="game">
+            <!--
+                Jar with objects inside is here:
+
+                    By default this will draw an empty jar
+                    TODO:
+
+                        - Add JS functionality to render balls into the jar
+            -->
             <div class="row">
                 <div class="col-12">
                     <div class="box">
@@ -260,38 +320,145 @@
                         <div class="jar-top"></div>
                     </div>
                 </div>
-
             </div>
+            <!--
+                Participants in Group Estimation game
+
+                    By default the current user will be placed as the far left participant
+
+            -->
             <div class="row">
                 <div class="col-1"></div>
-                <div class="col-2">
-                    <div class="person" id="player1">
+                <!-- Current Player: This browser's player -->
+                <div class="col-2" id="player1-container" style="border-right: 2px solid black;">
+                    <div class="row" id="player1-name-container">
+                        <div class="col-12" id="player1-name-content">
+                            <h3 id="player1-name">You</h3>
+                        </div>
+                    </div>
+                    <div class="row" id="player1-avatar-container">
+                        <div class="col-12" id="player1-avatar-content">
+                            <div class="person" id="player1">
 
+                            </div>
+                        </div>
                     </div>
-                    <input class="guess" type="number">
+                    <div class="row" id="player1-guess-container">
+                        <div class="col-12" id="player1-guess-content-input">
+                            <input class="guess" id="player1-guess" type="number" value="" required>
+                        </div>
+                        <div class="col-12" id="player1-guess-content-text">
+                            <h4 id="player1-guess-text"></h4>
+                        </div>
+                    </div>
+                    <div class="row" id="player1-submit-container">
+                        <div class="col-12" id="player1-submit-content">
+                            <button type="button" class="btn btn-dark" id="estimation-button">
+                                Submit
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-2">
-                    <div class="person" id="player2">
+                <!-- Other Players: All other players -->
+                <div class="col-8" id="other-player-container">
+                    <div class="row" id="other-player-content">
+                        <div class="col-3" id="player2-container">
+                            <div class="row" id="player2-name-container">
+                                <div class="col-12" id="player2-name-content">
+                                    <h3 id="player2-name">Player 2</h3>
+                                </div>
+                            </div>
+                            <div class="row" id="player2-avatar-container">
+                                <div class="col-12" id="player2-avatar-content">
+                                    <div class="person" id="player2">
+        
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" id="player2-guess-container">
+                                <div class="col-12" id="player2-nudge-content">
+                                    <button type="button" class="btn btn-danger" id="player2-nudge-button" disabled>
+                                        Nudge
+                                    </button>
+                                </div>
+                                <div class="col-12" id="player2-guess-content-text">
+                                    <h4 id="player2-guess-text"> </h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-3" id="player3-container">
+                            <div class="row" id="player3-name-container">
+                                <div class="col-12" id="player3-name-content">
+                                    <h3 id="player3-name">Player 3</h3>
+                                </div>
+                            </div>
+                            <div class="row" id="player3-avatar-container">
+                                <div class="col-12" id="player3-avatar-content">
+                                    <div class="person" id="player3">
+        
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" id="player3-guess-container">
+                                <div class="col-12" id="player3-nudge-content">
+                                    <button type="button" class="btn btn-danger" id="player3-nudge-button" disabled>
+                                        Nudge
+                                    </button>
+                                </div>
+                                <div class="col-12" id="player3-guess-content-text">
+                                    <h4 id="player3-guess-text"></h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-3" id="player4-container">
+                            <div class="row" id="player4-name-container">
+                                <div class="col-12" id="player4-name-content">
+                                    <h3 id="player4-name">Player 4</h3>
+                                </div>
+                            </div>
+                            <div class="row" id="player4-avatar-container">
+                                <div class="col-12" id="player4-avatar-content">
+                                    <div class="person" id="player4">
+        
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" id="player4-guess-container">
+                                <div class="col-12" id="player4-nudge-content">
+                                    <button type="button" class="btn btn-danger" id="player4-nudge-button" disabled>
+                                        Nudge
+                                    </button>
+                                </div>
+                                <div class="col-12" id="player4-guess-content-text">
+                                    <h4 id="player4-guess-text"></h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-3" id="player5-container">
+                            <div class="row" id="player5-name-container">
+                                <div class="col-12" id="player5-name-content">
+                                    <h3 id="player5-name">Player 5</h3>
+                                </div>
+                            </div>
+                            <div class="row" id="player5-avatar-container">
+                                <div class="col-12" id="player5-avatar-content">
+                                    <div class="person" id="player5">
+        
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" id="player5-guess-container">
+                                <div class="col-12" id="player5-nudge-content">
+                                    <button type="button" class="btn btn-danger" id="player5-nudge-button" disabled>
+                                        Nudge
+                                    </button>
+                                </div>
+                                <div class="col-12" id="player5-guess-content-text">
+                                    <h4 id="player5-guess-text"></h4>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <input class="guess" type="number">
-                </div>
-                <div class="col-2">
-                    <div class="person" id="player3">
-
-                    </div>
-                    <input class="guess" type="number">
-                </div>
-                <div class="col-2">
-                    <div class="person" id="player4">
-
-                    </div>
-                    <input class="guess" type="number">
-                </div>
-                <div class="col-2">
-                    <div class="person" id="player5">
-
-                    </div>
-                    <input class="guess" type="number">
                 </div>
                 <div class="col-1"></div>
             </div>
@@ -319,11 +486,11 @@
     <script src="/mplib/src/mpconfig.js"></script>
     <script>
         // Filename of the game code (needs to match file below)
-        var jsCode = '/mplib/examples/groupestimation.js';
+        var jsCode = '/mplib/examples/groupestimation/groupestimation.js';
     </script>
 
     <script type="module" src="/mplib/src/mplib.js" async></script>
-    <script type="module" src="/mplib/examples/groupestimation.js"></script>
+    <script type="module" src="/mplib/examples/groupestimation/groupestimation.js"></script>
 
     <!-- Option 1: Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
