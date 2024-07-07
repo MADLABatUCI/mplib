@@ -82,6 +82,7 @@ let gameScreen = document.getElementById('gameScreen');
 let messageWaitingRoom = document.getElementById('messageWaitingRoom');
 let messageGame = document.getElementById('messageGame');
 let messageFinish = document.getElementById('messageFinish');
+let info = document.getElementById('info');
 
 let cameraEl = document.querySelector('#camera');
 let characterNameEl = document.querySelector('#characterName');
@@ -396,7 +397,6 @@ function showInstructions() {
 //   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
-// This callback function is triggered when a waiting room starts
 function sessionChange(sessionInfo, typeChange) {
     // typeChange can be the following
     // 'joinedWaitingRoom'
@@ -431,23 +431,26 @@ function sessionChange(sessionInfo, typeChange) {
         gameScreen.style.display = 'block';
         scene.style.visibility = 'visible';
         scene.style.display = 'block';
-        leaveButton.style.display = 'block';
+        info.style.display = 'block';
         
         let dateString = timeStr(sessionInfo.sessionStartedAt);
         let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
         myconsolelog( str );
 
-        let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-        //messageGame.innerHTML = str2;
+        //let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+        
 
         // Add this player's avatar 
         addSelf( sessionInfo.arrivalIndex ); 
+
+        let str2 = `You are: ${id}`;
+        messageGame.innerHTML = str2;
 
         tick();
    }
 
    if (typeChange === 'updateOngoingSession') {
-       // handle deletion of character?
+       // if we want to update some screen information about current number of players
    }
 
    if (typeChange === 'endSession') {
@@ -459,7 +462,7 @@ function sessionChange(sessionInfo, typeChange) {
         scene.style.visibility = 'hidden';
         scene.style.display = 'none';
 
-        leaveButton.style.display = 'none';
+        info.style.display = 'none';
 
         if (sessionInfo.sessionErrorCode != 0) {
             messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
