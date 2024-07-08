@@ -108,10 +108,9 @@
     
           
         </a-scene>
-        <div class="uiContainer" >
-            <div class="containertext" id="messageGame"></div>
-            <a href="#" class="button" id="leaveBtn" style="display:none">End Session</a> 
-                
+        <div class="uiContainer" id="info" style="display:none">   
+            <a href="#" class="button" id="leaveBtn">End Session</a>
+            <div id="messageGame" style="color: black;"></div>     
         </div>
         
     </div>
@@ -124,17 +123,9 @@
     
     
     <script src="/mplib/src/mpconfig.js"></script>
-    <script>
-        // Filename of the game code (needs to match file below)
-        var jsCode = '/mplib/examples/virtualworld/virtualworld.js';
-    </script>
-
     <script type="module" src="/mplib/src/mplib.js" async></script>
     <script type="module" src="/mplib/examples/virtualworld/virtualworld.js"></script>
 
-
-    
-      
     </script>
   </body>
 </html>

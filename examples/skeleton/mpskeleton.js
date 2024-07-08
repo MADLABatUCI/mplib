@@ -10,6 +10,7 @@
 // the Firebase MultiPlayer library
 // -------------------------------------
 import {
+    initializeMPLIB,
     joinSession,
     leaveSession,
     updateStateDirect,
@@ -21,29 +22,40 @@ import {
 // -------------------------------------
 //       Session configuration
 // -------------------------------------
-// studyId is the name of the root node we create in the realtime database
-export const studyId = 'testmplib'; 
+// studyId is the name of the root node created in the realtime database
+const studyId = 'skeleton'; 
 
 // Configuration setting for the session
-export const sessionConfig = {
+let sessionConfig = {
     minPlayersNeeded: 2, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
     maxPlayersNeeded: 3, // Maximum number of players allowed in a session
     maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
     allowReplacements: true, // Allow replacing any players who leave an ongoing session?
     exitDelayWaitingRoom: 0, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
-    maxDurationBelowMinPlayersNeeded: 10, // Number of seconds to continue an active session even though there are fewer than the minimum number of players (if set to zero, session terminates immediately)
     maxHoursSession: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
     recordData: false // Record all data?  
 };
-export const verbosity = 2;
+const verbosity = 1; // 0: no writing to console; 1: write output to console
 
 // Allow URL parameters to update these default parameters
 updateConfigFromUrl( sessionConfig );
 
+// Pass names of the callback functions in this code to MPLIB
+let funList = { 
+    sessionChangeFunction: sessionChange,
+    receiveStateChangeFunction: receiveStateChange,
+    evaluateUpdateFunction: evaluateUpdate,
+    removePlayerStateFunction: removePlayerState
+  };
+
+// Set the session parameters and callback functions for MPLIB
+initializeMPLIB( sessionConfig , studyId , funList, verbosity );
+
+
 // -------------------------------------
 //       Globals
 // -------------------------------------
-
+let playerId;
 
 // -------------------------------------
 //       Graphics handles
@@ -76,7 +88,7 @@ leaveButton.addEventListener('click', function () {
 // --------------------------------------------------------------------------------------
 
 // Function to receive state changes from Firebase (broadcast by other players)
-export function receiveStateChange(nodeName, newState, typeChange ) {
+function receiveStateChange(nodeName, newState, typeChange ) {
     // typeChange can be the following:
     //  'onChildChanged'
     //  'onChildAdded'
@@ -87,7 +99,7 @@ export function receiveStateChange(nodeName, newState, typeChange ) {
 // Function triggered by a call to "updateStateTransaction" to evaluate if the proposed action is valid
 // If "updateStateTransaction" is not called, and all updates are done through "updateStateDirect", there is no 
 // need for this function
-export function evaluateUpdate( path, state, action, actionArgs ) {
+function evaluateUpdate( path, state, action, actionArgs ) {
     let isAllowed = false;
     let newState = null;
 
@@ -97,91 +109,119 @@ export function evaluateUpdate( path, state, action, actionArgs ) {
     return evaluationResult;
 }
 
-// --------------------------------------------------------------------------------------
-//   Handle waiting room and session events triggered by MPLIB
-//   These callback functions are required, but the contents can be empty and left inconsequential  
-//   (note: all timestamps are server-side expressed in milliseconds since the Unix Epoch)
-// --------------------------------------------------------------------------------------
+// Function triggered when this client closes the window and the player needs to be removed from the state 
+function removePlayerState( playerId ) {
 
-// This callback function is triggered when a waiting room starts
-export function joinedWaitingRoom(sessionInfo) {
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'block';
-
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let numPlayers = sessionInfo.numPlayers;
-    let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
-
-    messageWaitingRoom.innerText = str2;
 }
 
-// This callback function is triggered when waiting room is still ongoing, but number of players waiting changes
-export function updateWaitingRoom(sessionInfo) {
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'block';
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let numPlayers = sessionInfo.numPlayers;
-    let str2;
-    if (sessionInfo.status == 'waitingRoomCountdown') {
-        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
-    }  else {       
-        str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
-    } 
-    messageWaitingRoom.innerText = str2;
+// This callback function is triggered when a session change occurs
+function sessionChange(sessionInfo, typeChange) {
+   // typeChange can be the following
+   // 'joinedWaitingRoom'
+   // 'updateWaitingRoom'
+   // 'startSession'
+   // 'updateOngoingSession'
+   // 'endSession'
+
+   playerId = sessionInfo.playerId; // the playerId for this client
+   let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
+   let numPlayers = sessionInfo.numPlayers; // the current number of players
+   
+   let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
+   messageWaitingRoom.innerText = str2;
+
+   if (typeChange === 'joinedWaitingRoom') {
+        // switch screens from instruction to waiting room
+        instructionsScreen.style.display = 'none';
+        waitingRoomScreen.style.display = 'block';
+   }
+
+   if (typeChange === 'updateWaitingRoom') {
+        // switch screens from instruction to waiting room
+        instructionsScreen.style.display = 'none';
+        waitingRoomScreen.style.display = 'block';
+        if (sessionInfo.status === 'waitingRoomCountdown') {
+            str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+            messageWaitingRoom.innerText = str2;
+        }
+   }
+
+   if ((typeChange === 'startSession') ||  (typeChange === 'updateOngoingSession')) {
+        instructionsScreen.style.display = 'none';
+        waitingRoomScreen.style.display = 'none';
+        gameScreen.style.display = 'block';
+
+        if (typeChange === 'startSession') {
+           let dateString = timeStr(sessionInfo.sessionStartedAt);
+           let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
+           myconsolelog( str );
+        }
+
+        let str2 = `<p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+        str2 += `<p>Player ID: ${ sessionInfo.playerId}$</p>`;
+
+        str2 += `<p>Current number of players (${ sessionInfo.numPlayers} total):`;
+        for (let i=0; i<numPlayers; i++) {
+            let playerNow = sessionInfo.playerIds[i];
+            str2 += `<br>Arrival #${sessionInfo.arrivalIndices[i]},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        }
+        str2 += `</p>`;
+
+        let allPlayersEver = Object.keys( sessionInfo.allPlayersEver );
+        let numPlayersEver = allPlayersEver.length;
+        str2 += `<p>History of players ever joined this session (${numPlayersEver} total):`;
+        for (let i=0; i<numPlayersEver; i++) {
+            let playerNow = allPlayersEver[i];
+            str2 += `<br>Arrival #${sessionInfo.allPlayersEver[playerNow].arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+            str2 += ` Arrival time: ${timeStr(sessionInfo.allPlayersEver[playerNow].sessionStartedAt)}`;
+            if (sessionInfo.allPlayersEver[playerNow].leftGameAt != 0) {
+                str2 += ` Finish time: ${timeStr(sessionInfo.allPlayersEver[playerNow].leftGameAt)}`;
+            }
+            if (sessionInfo.allPlayersEver[playerNow].finishStatus) {
+                str2 += ` Finish status: ${sessionInfo.allPlayersEver[playerNow].finishStatus}`;
+            }
+        }
+        str2 += `</p>`;
+
+        messageGame.innerHTML = str2;
+   }
+
+
+
+   if (typeChange === 'endSession') {
+        instructionsScreen.style.display = 'none';
+        waitingRoomScreen.style.display = 'none';
+        gameScreen.style.display = 'none';
+        finishScreen.style.display = 'block';
+
+        // Check if any of the players (who ever played) terminated the session abnormally
+        let players = sessionInfo.allPlayersEver; 
+        const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
+
+        if (hasAbnormalStatus) {
+            // Add your own code below for handling case where another player closed their window or were disconnected prematurely
+            // Note that this is an issue with games that have a predefined number of players, but might not be an issue with experiments with
+            // a flexible number of players 
+            // ....
+        }
+
+        if (sessionInfo.sessionErrorCode != 0) {
+            messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
+            
+            if (sessionInfo.sessionErrorCode==1) {
+                // Add your own code below for handling case of no sessions being available 
+                // .... 
+            }
+
+            if (sessionInfo.sessionErrorCode==2) {
+                // Add your own code below for handling case of this client being disconnected (e.g. internet connectivity issues) 
+                // .... 
+            }
+        } else {
+            messageFinish.innerHTML = `<p>You have completed the session.</p>`;
+        }
+   }
 }
-
-// This callback function is triggered when the session starts (when enough players have gathered, or when only a single player is needed)
-export function startSession(sessionInfo) {
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'none';
-    gameScreen.style.display = 'block';
-    
-    let dateString = timeStr(sessionInfo.sessionStartedAt);
-    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
-    myconsolelog( str );
-
-    let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    messageGame.innerHTML = str2;
-}
-
-// This callback function is triggered when session is active, but number of players changes
-export function updateSession(sessionInfo) {    
-    let dateString = timeStr(sessionInfo.sessionStartedAt);
-    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
-    myconsolelog( str );
-
-    let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    messageGame.innerHTML = str2;
-}
-
-export function endSession( sessionInfo ) {
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'none';
-    gameScreen.style.display = 'none';
-    finishScreen.style.display = 'block';
-
-    if (sessionInfo.sessionErrorCode != 0) {
-        messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
-    } else {
-        messageFinish.innerHTML = `<p>You have completed the session.</p>`;
-    }
-    
-}
-
-// This callback function is triggered when this client gains control over dynamic objects
-export function gainedControl() {
-    myconsolelog('Client gained control');
-}
-
-// This  callback function is triggered when this client loses control over dynamic objects
-// e.g., when client's browser loses focus
-export function losesControl() {
-    myconsolelog('Client loses control');
-}
-
-// -------------------------------------------------------------------------------------
-//       Handle events triggered by MPLIB related to changes in the game state
-// -------------------------------------------------------------------------------------
 
 
 // -------------------------------------
