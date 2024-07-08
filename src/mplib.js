@@ -145,7 +145,7 @@ function triggerSessionCallback( session , sessionId ) {
     si.arrivalIndices = Object.values(session.players).map(player => player.arrivalIndex);
     si.countdown = null;
     si.waitingRoomStartedAt = session.waitingRoomStartedAt;
-    si.timeElapsedToWaitingRoom = session.timeElapsedToWaitingRoom; // time elapsed (in msec) from start of library (reading instructions to wait room)
+    //si.timeElapsedToWaitingRoom = session.timeElapsedToWaitingRoom; // time elapsed (in msec) from start of library (reading instructions to wait room)
 
 
     if ((currentStatus == 'waiting') & (!si.sessionInitiated)) {
@@ -156,9 +156,8 @@ function triggerSessionCallback( session , sessionId ) {
         si.arrivalIndex = session.players[si.playerId].arrivalIndex;
         numPlayersBefore = si.numPlayers;
         si.status = 'waitingRoomStarted';
-        recordSessionEvent( si );
-        // trigger callback 
-        callback_sessionChange(si, 'joinedWaitingRoom' );                                   
+        recordSessionEvent( si , 'joinedWaitingRoom' );      
+        callback_sessionChange(si, 'joinedWaitingRoom' ); // trigger callback                                    
     } else if ((currentStatus == 'active') & (!si.sessionStarted)) {
         si.sessionInitiated = true;
         si.sessionStarted = true;
@@ -170,7 +169,7 @@ function triggerSessionCallback( session , sessionId ) {
         
         if (sessionConfig.exitDelayWaitingRoom==0) {
             si.status = 'sessionStarted';
-            recordSessionEvent( si );
+            recordSessionEvent( si , si.status );
             startSession(); // Can start the session without delay
         } else {
             // Delay the start of entering the session
@@ -185,7 +184,7 @@ function triggerSessionCallback( session , sessionId ) {
                 } else {
                     clearInterval(intervalId); 
                     si.status = 'sessionStarted';
-                    recordSessionEvent( si );
+                    recordSessionEvent( si , si.status );
                     startSession();
                 }
             }, 1000);
@@ -194,7 +193,7 @@ function triggerSessionCallback( session , sessionId ) {
     } else if (si.numPlayers !== numPlayersBefore) {
         numPlayersBefore = si.numPlayers;
         if (currentStatus == 'waiting') {
-            recordSessionEvent( si );
+            recordSessionEvent( si , 'updateWaitingRoom' );
             callback_sessionChange( si , 'updateWaitingRoom' );
         }
         if (currentStatus == 'active') {
@@ -203,7 +202,7 @@ function triggerSessionCallback( session , sessionId ) {
                 // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
                 // ...
             } else {
-                recordSessionEvent( si );                                        
+                recordSessionEvent( si , 'updateOngoingSession' );                                        
                 callback_sessionChange( si , 'updateOngoingSession' );
 
                 // Check if the number of players is below the minimum
@@ -211,7 +210,8 @@ function triggerSessionCallback( session , sessionId ) {
                     // Leave session immediately
                     //si.sessionErrorCode = 3;
                     //si.sessionErrorMsg = 'Number of players fell below minimum needed';
-                    recordSessionEvent( si );
+                    si.status = 'endSession';
+                    recordSessionEvent( si , si.status );
                     leaveSession();
                     
                 }                                         
@@ -242,6 +242,7 @@ export function joinSession() {
             // Trigger function when session (active or waiting-room) could not be started
             si.sessionErrorCode = 1;
             si.sessionErrorMsg = 'Unable to join session';
+            si.status = 'endSession';
             callback_sessionChange( si , 'endSession' );
         } else {
             // Now that we are in a session (active or waiting room), keep track of presence
@@ -257,9 +258,10 @@ export function joinSession() {
                     myconsolelog("Connected to firebase");
                 } else {
                     myconsolelog("Disconnected from firebase");
-                    si.status = 'leftSession';
+                    si.status = 'endSession';
                     si.sessionErrorCode = 2;
                     si.sessionErrorMsg = 'Session Disconnected';
+                    recordSessionEvent( si , si.status );
                     callback_sessionChange( si , 'endSession' );
                 }
             });
@@ -290,8 +292,9 @@ export async function leaveSession() {
         off(sessionsRef);
 
         // If this transaction is successful...
-        si.status = 'leftSession';
+        si.status = 'endSession';
 
+        recordSessionEvent( si , 'endSession' );
         callback_sessionChange( si , 'endSession' );
     });  
 }
@@ -405,7 +408,7 @@ function recordEventData(path, state, skipRecord ) {
     } 
 }
 
-function recordSessionEvent( si ) {
+function recordSessionEvent( si , status ) {
     // Are we recording the data?
     if (sessionConfig.recordData) {
         // Create a path to store all recorded gamestates   
@@ -413,6 +416,7 @@ function recordSessionEvent( si ) {
 
         let returnResult = {
             sessionInfo: si,
+            status,
             serverTimeStamp: serverTimestamp(),
         };
         
