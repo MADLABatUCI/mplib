@@ -35,6 +35,7 @@ let intervalId; // interval timer for the waiting room countdown;
 let startTime;
 
 let callback_sessionChange;
+let callback_sessionChangev2;
 let callback_receiveStateChange;
 let callback_evaluateUpdate;
 let callback_removePlayerState; 
@@ -56,7 +57,8 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbos
     verbosity = verbosityNow; // verbosity = 0: no messages to console; 1: write messages to the console 
 
     // List of callback functions that MPLIB can use when session or state changes
-    callback_sessionChange = funList.sessionChangeFunction;
+    //callback_sessionChange = funList.sessionChangeFunction;
+    callback_sessionChangev2 = funList.sessionChangeFunctionv2;
     callback_receiveStateChange = funList.receiveStateChangeFunction;
     callback_evaluateUpdate = funList.evaluateUpdateFunction;
     callback_removePlayerState = funList.removePlayerStateFunction;
@@ -157,7 +159,8 @@ function triggerSessionCallback( session , sessionId ) {
         numPlayersBefore = si.numPlayers;
         si.status = 'waitingRoomStarted';
         recordSessionEvent( si , 'joinedWaitingRoom' );      
-        callback_sessionChange(si, 'joinedWaitingRoom' ); // trigger callback                                    
+        callback_sessionChangev2.joinedWaitingRoom(si); // trigger callback 
+        //callback_sessionChange(si, 'joinedWaitingRoom' ); // trigger callback                                    
     } else if ((currentStatus == 'active') & (!si.sessionStarted)) {
         si.sessionInitiated = true;
         si.sessionStarted = true;
@@ -179,7 +182,8 @@ function triggerSessionCallback( session , sessionId ) {
                 if (remainingSeconds > 0) {
                     si.status = 'waitingRoomCountdown';
                     si.countdown = remainingSeconds;
-                    callback_sessionChange( si , 'updateWaitingRoom' );
+                    callback_sessionChangev2.updateWaitingRoom(si);
+                    //callback_sessionChange( si , 'updateWaitingRoom' );
                     remainingSeconds--;
                 } else {
                     clearInterval(intervalId); 
@@ -194,7 +198,8 @@ function triggerSessionCallback( session , sessionId ) {
         numPlayersBefore = si.numPlayers;
         if (currentStatus == 'waiting') {
             recordSessionEvent( si , 'updateWaitingRoom' );
-            callback_sessionChange( si , 'updateWaitingRoom' );
+            callback_sessionChangev2.updateWaitingRoom(si);
+            //callback_sessionChange( si , 'updateWaitingRoom' );
         }
         if (currentStatus == 'active') {
             si.sessionStartedAt = session.sessionStartedAt;
@@ -202,8 +207,9 @@ function triggerSessionCallback( session , sessionId ) {
                 // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
                 // ...
             } else {
-                recordSessionEvent( si , 'updateOngoingSession' );                                        
-                callback_sessionChange( si , 'updateOngoingSession' );
+                recordSessionEvent( si , 'updateOngoingSession' );
+                callback_sessionChangev2.updateOngoingSession(si);                                        
+                //callback_sessionChange( si , 'updateOngoingSession' );
 
                 // Check if the number of players is below the minimum
                 if (si.numPlayers < sessionConfig.minPlayersNeeded) {
@@ -243,7 +249,8 @@ export function joinSession() {
             si.sessionErrorCode = 1;
             si.sessionErrorMsg = 'Unable to join session';
             si.status = 'endSession';
-            callback_sessionChange( si , 'endSession' );
+            callback_sessionChangev2.endSession(si);
+            //callback_sessionChange( si , 'endSession' );
         } else {
             // Now that we are in a session (active or waiting room), keep track of presence
             presenceRef = ref(db, `${studyId}/presence/${si.playerId}`);
@@ -262,7 +269,8 @@ export function joinSession() {
                     si.sessionErrorCode = 2;
                     si.sessionErrorMsg = 'Session Disconnected';
                     recordSessionEvent( si , si.status );
-                    callback_sessionChange( si , 'endSession' );
+                    callback_sessionChangev2.endSession(si);
+                    //callback_sessionChange( si , 'endSession' );
                 }
             });
         }
@@ -295,7 +303,8 @@ export async function leaveSession() {
         si.status = 'endSession';
 
         recordSessionEvent( si , 'endSession' );
-        callback_sessionChange( si , 'endSession' );
+        callback_sessionChangev2.endSession(si);
+        //callback_sessionChange( si , 'endSession' );
     });  
 }
 
@@ -345,7 +354,8 @@ function startSession() {
     });
 
     // Invoke function at client
-    callback_sessionChange( si , 'startSession' );
+    callback_sessionChangev2.startSession(si);
+    //callback_sessionChange( si , 'startSession' );
 }
 
 // Handle event of player closing browser window
