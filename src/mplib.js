@@ -32,6 +32,7 @@ let numPlayersBefore = 0;
 let focusStatus = 'focus';
 let playerControlBefore = '';
 let intervalId; // interval timer for the waiting room countdown;
+let startTime;
 
 let callback_sessionChange;
 let callback_receiveStateChange;
@@ -61,6 +62,7 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbos
     callback_removePlayerState = funList.removePlayerStateFunction;
 
     // Reset the session info information
+    startTime = new Date(); // record the time at which the library was started (typically start of reading instructions)
     initSessionInfo();
     myconsolelog("Player id=" + si.playerId);
 
@@ -124,6 +126,7 @@ function initSessionInfo() {
         arrivalIndex: null, 
         arrivalIndices: [],
         waitingRoomStartedAt: null, 
+        timeElapsedToWaitingRoom: null,
         countdown: null,
         sessionStartedAt: null,
         sessionErrorCode: 0,
@@ -141,8 +144,10 @@ function triggerSessionCallback( session , sessionId ) {
     si.allPlayersEver = session.allPlayersEver; 
     si.arrivalIndices = Object.values(session.players).map(player => player.arrivalIndex);
     si.countdown = null;
+    si.waitingRoomStartedAt = session.waitingRoomStartedAt;
+    si.timeElapsedToWaitingRoom = session.timeElapsedToWaitingRoom; // time elapsed (in msec) from start of library (reading instructions to wait room)
 
-    
+
     if ((currentStatus == 'waiting') & (!si.sessionInitiated)) {
         si.sessionInitiated = true;
         si.sessionStarted = false;
@@ -151,7 +156,6 @@ function triggerSessionCallback( session , sessionId ) {
         si.arrivalIndex = session.players[si.playerId].arrivalIndex;
         numPlayersBefore = si.numPlayers;
         si.status = 'waitingRoomStarted';
-        si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
         recordSessionEvent( si );
         // trigger callback 
         callback_sessionChange(si, 'joinedWaitingRoom' );                                   
@@ -162,9 +166,8 @@ function triggerSessionCallback( session , sessionId ) {
         si.sessionIndex = session.sessionIndex;
         si.arrivalIndex = session.players[si.playerId].arrivalIndex;
         numPlayersBefore = si.numPlayers;
-        si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
+        si.sessionStartedAt = session.sessionStartedAt;
         
-
         if (sessionConfig.exitDelayWaitingRoom==0) {
             si.status = 'sessionStarted';
             recordSessionEvent( si );
@@ -191,12 +194,11 @@ function triggerSessionCallback( session , sessionId ) {
     } else if (si.numPlayers !== numPlayersBefore) {
         numPlayersBefore = si.numPlayers;
         if (currentStatus == 'waiting') {
-            si.waitingRoomStartedAt = session.waitingRoomStartedAt - serverTimeOffset;
             recordSessionEvent( si );
             callback_sessionChange( si , 'updateWaitingRoom' );
         }
         if (currentStatus == 'active') {
-            si.sessionStartedAt = session.sessionStartedAt - serverTimeOffset;
+            si.sessionStartedAt = session.sessionStartedAt;
             if (si.status == 'waitingRoomCountdown') {
                 // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
                 // ...
@@ -207,8 +209,8 @@ function triggerSessionCallback( session , sessionId ) {
                 // Check if the number of players is below the minimum
                 if (si.numPlayers < sessionConfig.minPlayersNeeded) {
                     // Leave session immediately
-                    si.sessionErrorCode = 3;
-                    si.sessionErrorMsg = 'Number of players fell below minimum needed';
+                    //si.sessionErrorCode = 3;
+                    //si.sessionErrorMsg = 'Number of players fell below minimum needed';
                     recordSessionEvent( si );
                     leaveSession();
                     
@@ -600,7 +602,7 @@ function removePlayerSession( allSessions , thisPlayer, finishStatus ) {
                         let playerIdOther = sortedPlayerIds[0];
 
                         // Copy over the data
-                        let playerData1 = { joinedWaitingRoomAt: sessionOther.players[playerIdOther].joinedWaitingRoomAt, joinedGameAt: 0 };
+                        let playerData1 = { waitingRoomStartedAt: sessionOther.players[playerIdOther].waitingRoomStartedAt, sessionStartedAt: 0 };
 
                         // Delete player from the session it is associated with
                         delete sessionOther.players[playerIdOther];
@@ -627,8 +629,8 @@ function removePlayerSession( allSessions , thisPlayer, finishStatus ) {
                                 let players = allSessions[sessionIdThis].players;
                                 Object.keys(players).forEach(function (key) {
                                     let getTimeNow = serverTimestamp();
-                                    players[key].joinedGameAt = getTimeNow;
-                                    allSessions[sessionIdThis].allPlayersEver[key].joinedGameAt = getTimeNow;
+                                    players[key].sessionStartedAt = getTimeNow;
+                                    allSessions[sessionIdThis].allPlayersEver[key].sessionStartedAt = getTimeNow;
                                 });
 
                                 // Set the start time for the session
@@ -636,8 +638,8 @@ function removePlayerSession( allSessions , thisPlayer, finishStatus ) {
                             } else {
                                 // Just assign the start time for this player
                                 let getTimeNow = serverTimestamp();
-                                allSessions[sessionIdThis].players[playerIdOther].joinedGameAt = getTimeNow;
-                                allSessions[sessionIdThis].allPlayersEver[playerIdOther].joinedGameAt = getTimeNow;
+                                allSessions[sessionIdThis].players[playerIdOther].sessionStartedAt = getTimeNow;
+                                allSessions[sessionIdThis].allPlayersEver[playerIdOther].sessionStartedAt = getTimeNow;
                             }
                         }
 
@@ -687,8 +689,9 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
 
                 // Create player status
                 let playerData1 = {
-                    joinedWaitingRoomAt: serverTimestamp(), 
-                    joinedGameAt: 0, 
+                    waitingRoomStartedAt: serverTimestamp(), 
+                    timeElapsedToWaitingRoom: new Date() - startTime,
+                    sessionStartedAt: 0, 
                     status: focusStatus, 
                     numBlurred: 0,
                     arrivalIndex: count,
@@ -710,8 +713,8 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
                         let players = allSessions[proposedSessionId].players;
                         Object.keys(players).forEach(function (key) {
                             let getTimeNow = serverTimestamp();
-                            players[key].joinedGameAt = getTimeNow;
-                            allSessions[proposedSessionId].allPlayersEver[key].joinedGameAt = getTimeNow;
+                            players[key].sessionStartedAt = getTimeNow;
+                            allSessions[proposedSessionId].allPlayersEver[key].sessionStartedAt = getTimeNow;
                         });
 
                         // Set the start time for the session
@@ -719,8 +722,8 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
                     } else {
                         // Just assign the start time for this player
                         let getTimeNow = serverTimestamp();
-                        allSessions[proposedSessionId].players[thisPlayer].joinedGameAt = getTimeNow;
-                        allSessions[proposedSessionId].allPlayersEver[thisPlayer].joinedGameAt = getTimeNow;
+                        allSessions[proposedSessionId].players[thisPlayer].sessionStartedAt = getTimeNow;
+                        allSessions[proposedSessionId].allPlayersEver[thisPlayer].sessionStartedAt = getTimeNow;
                     }
                 }
 
@@ -742,9 +745,12 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
             proposedSessionId = newSessionRef.key;
             //let thisSession = allSessions[proposedSessionId];
             
+            let timeElapsedToWaitingRoom = new Date() - startTime;
+
             let playerData1 = {
-                joinedWaitingRoomAt: serverTimestamp(), 
-                joinedGameAt: 0, 
+                waitingRoomStartedAt: serverTimestamp(),
+                timeElapsedToWaitingRoom, 
+                sessionStartedAt: 0, 
                 status: focusStatus, 
                 numBlurred: 0,
                 arrivalIndex: 1,
@@ -756,7 +762,8 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
                 players: playerData2, 
                 allPlayersEver: playerData2, 
                 status: "waiting",
-                waitingRoomStartedAt: serverTimestamp(), 
+                waitingRoomStartedAt: serverTimestamp(),
+                timeElapsedToWaitingRoom,  
                 sessionStartedAt: 0, 
                 sessionIndex: numSessions + 1,
                 numPlayersEverJoined: 1
@@ -776,8 +783,8 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
                 let players = allSessions[proposedSessionId].players;
                 Object.keys(players).forEach(function (key) {
                     let getTimeNow = serverTimestamp();
-                    players[key].joinedGameAt = getTimeNow;
-                    allSessions[proposedSessionId].allPlayersEver[key].joinedGameAt = getTimeNow;
+                    players[key].sessionStartedAt = getTimeNow;
+                    allSessions[proposedSessionId].allPlayersEver[key].sessionStartedAt = getTimeNow;
                 });
 
                 // Set the start time for the session
@@ -836,8 +843,8 @@ function sortSessions(sessions) {
 function sortPlayersTime(players) {
     let playerKeys = Object.keys(players || {});
     playerKeys.sort((a, b) => {
-        let timeA = players[a].joinedWaitingRoomAt;
-        let timeB = players[b].joinedWaitingRoomAt;
+        let timeA = players[a].waitingRoomStartedAt;
+        let timeB = players[b].waitingRoomStartedAt;
         return timeA - timeB;
     });
     return playerKeys;

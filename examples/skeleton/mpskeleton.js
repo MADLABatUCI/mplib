@@ -173,7 +173,7 @@ function sessionChange(sessionInfo, typeChange) {
         for (let i=0; i<numPlayersEver; i++) {
             let playerNow = allPlayersEver[i];
             str2 += `<br>Arrival #${sessionInfo.allPlayersEver[playerNow].arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
-            str2 += ` Arrival time: ${timeStr(sessionInfo.allPlayersEver[playerNow].joinedGameAt)}`;
+            str2 += ` Arrival time: ${timeStr(sessionInfo.allPlayersEver[playerNow].sessionStartedAt)}`;
             if (sessionInfo.allPlayersEver[playerNow].leftGameAt != 0) {
                 str2 += ` Finish time: ${timeStr(sessionInfo.allPlayersEver[playerNow].leftGameAt)}`;
             }
@@ -194,8 +194,29 @@ function sessionChange(sessionInfo, typeChange) {
         gameScreen.style.display = 'none';
         finishScreen.style.display = 'block';
 
+        // Check if any of the players (who ever played) terminated the session abnormally
+        let players = sessionInfo.allPlayersEver; 
+        const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
+
+        if (hasAbnormalStatus) {
+            // Add your own code below for handling case where another player closed their window or were disconnected prematurely
+            // Note that this is an issue with games that have a predefined number of players, but might not be an issue with experiments with
+            // a flexible number of players 
+            // ....
+        }
+
         if (sessionInfo.sessionErrorCode != 0) {
             messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
+            
+            if (sessionInfo.sessionErrorCode==1) {
+                // Add your own code below for handling case of no sessions being available 
+                // .... 
+            }
+
+            if (sessionInfo.sessionErrorCode==2) {
+                // Add your own code below for handling case of this client being disconnected (e.g. internet connectivity issues) 
+                // .... 
+            }
         } else {
             messageFinish.innerHTML = `<p>You have completed the session.</p>`;
         }
