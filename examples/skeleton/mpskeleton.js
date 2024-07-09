@@ -160,8 +160,16 @@ function updateWaitingRoom(sessionInfo) {
     // switch screens from instruction to waiting room
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
+
+    // Waiting Room is full and we can start game
     if (sessionInfo.status === 'waitingRoomCountdown') {
         str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+        messageWaitingRoom.innerText = str2;
+    } else { // Still waiting for more players, update wait count
+        let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
+        let numPlayers = sessionInfo.numPlayers; // the current number of players
+        
+        let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
         messageWaitingRoom.innerText = str2;
     }
 }
@@ -176,7 +184,6 @@ function startSession(sessionInfo) {
             - Displays additional "game started" messages
     */
     playerId = sessionInfo.playerId; // the playerId for this client
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
     let numPlayers = sessionInfo.numPlayers; // the current number of players
             
     instructionsScreen.style.display = 'none';
@@ -224,6 +231,9 @@ function updateOngoingSession(sessionInfo) {
             - Currently the same code as startSession
                 - Does not include the logging aspect of startSession
     */
+    playerId = sessionInfo.playerId; // the playerId for this client
+    let numPlayers = sessionInfo.numPlayers; // the current number of players
+                
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
