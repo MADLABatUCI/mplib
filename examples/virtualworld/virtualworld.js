@@ -40,7 +40,13 @@ updateConfigFromUrl( sessionConfig );
 
 // List names of the callback functions that are used in this code (so MPLIB knows which functions to trigger)
 let funList = { 
-    sessionChangeFunction: sessionChange,
+    sessionChangeFunction: {
+        joinedWaitingRoom: joinWaitingRoom,
+        updateWaitingRoom: updateWaitingRoom,
+        startSession: startSession,
+        updateOngoingSession: updateOngoingSession,
+        endSession: endSession
+    },
     receiveStateChangeFunction: receiveStateChange,
     removePlayerStateFunction: removePlayerState
 };
@@ -397,79 +403,122 @@ function showInstructions() {
 //   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
-function sessionChange(sessionInfo, typeChange) {
-    // typeChange can be the following
-    // 'joinedWaitingRoom'
-    // 'updateWaitingRoom'
-    // 'startSession'
-    // 'updateOngoingSession'
-    // 'endSession'
+function joinWaitingRoom(sessionInfo) {
+    /*
+        Functionality to invoke when joining a waiting room.
 
-   si = sessionInfo;
-   let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-   let numPlayers = sessionInfo.numPlayers;
-   let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
-   messageWaitingRoom.innerText = str2;
+        This function does the following:
+            - Determines the number of players needed for the game
+            - Creates an appropriate message based on players needed and players in waiting room
+            - Displays the waiting room screen
 
-   if (typeChange === 'joinedWaitingRoom') {
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'block';
-   }
+        NOTE:
+            This function is not utilized for this example
+    */
+    si = sessionInfo;
+    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
+    let numPlayers = sessionInfo.numPlayers;
+    let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
+    messageWaitingRoom.innerText = str2;
+    
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'block';
+}
 
-   if (typeChange === 'updateWaitingRoom') {
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'block';
-        if (sessionInfo.status === 'waitingRoomCountdown') {
-            str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
-            messageWaitingRoom.innerText = str2;
-        }
-   }
+function updateWaitingRoom(sessionInfo) {
+    /*
+        Functionality to invoke when updating the waiting room.
 
-   if (typeChange === 'startSession') {
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'none';
-        gameScreen.style.display = 'block';
-        scene.style.visibility = 'visible';
-        scene.style.display = 'block';
-        info.style.display = 'block';
-        
-        let dateString = timeStr(sessionInfo.sessionStartedAt);
-        let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
-        myconsolelog( str );
+        This function does the following:
+            - Displays the waiting room screen
+            - Checks the status of the current session
+                - If the status is 'waitingRoomCountdown' then the game will start
+                - otherwise continue waiting
+            - Displays a 'game will start' message if appropriate
 
-        //let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-        
+        NOTE:
+            This function is not utilized for this example
+    */
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'block';
+    if (sessionInfo.status === 'waitingRoomCountdown') {
+        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+        messageWaitingRoom.innerText = str2;
+    }
+}
 
-        // Add this player's avatar 
-        addSelf( sessionInfo.arrivalIndex ); 
+function startSession(sessionInfo) {
+    /*
+        Funtionality to invoke when starting a session.
 
-        let str2 = `You are: ${id}`;
-        messageGame.innerHTML = str2;
+        This function does the following:
+            - Displays the game screen
+            - Display the scene
+            - Logs the start of the game with the session ID and timestamp
+            - Add client player (this user) avatar
+            - Tell the client which player they are
+            - Starts a new game
+    */
+    // Set the global variable for the session
+    si = sessionInfo;
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'none';
+    gameScreen.style.display = 'block';
+    scene.style.visibility = 'visible';
+    scene.style.display = 'block';
+    info.style.display = 'block';
+    
+    let dateString = timeStr(sessionInfo.sessionStartedAt);
+    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
+    myconsolelog( str );
 
-        tick();
-   }
+    //let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+    
 
-   if (typeChange === 'updateOngoingSession') {
-       // if we want to update some screen information about current number of players
-   }
+    // Add this player's avatar 
+    addSelf( sessionInfo.arrivalIndex ); 
 
-   if (typeChange === 'endSession') {
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'none';
-        gameScreen.style.display = 'none';
-        finishScreen.style.display = 'block';
+    let str2 = `You are: ${id}`;
+    messageGame.innerHTML = str2;
 
-        scene.style.visibility = 'hidden';
-        scene.style.display = 'none';
+    tick();
+}
 
-        info.style.display = 'none';
+function updateOngoingSession(sessionInfo) {
+    /*
+        Functionality to invoke when updating an ongoing session.
 
-        if (sessionInfo.sessionErrorCode != 0) {
-            messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
-        } else {
-            messageFinish.innerHTML = `<p>You have completed the session.</p>`;
-        }
-   }
+        This function is currently empty.
+    */
+}
+
+function endSession(sessionInfo) {
+    /*
+        Functionality to invoke when ending a session.
+
+        This function does the following:
+            - Displays the finish screen (hides all other divs)
+            - Hide and disable the scene
+            - Checks if any players terminated their session abnormally
+                - If so, an "abnormal termination" message is created
+                - If not, then the session completed normally
+            - Displays a message based on the termination status [normal, abnormal]
+    */
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'none';
+    gameScreen.style.display = 'none';
+    finishScreen.style.display = 'block';
+
+    scene.style.visibility = 'hidden';
+    scene.style.display = 'none';
+
+    info.style.display = 'none';
+
+    if (sessionInfo.sessionErrorCode != 0) {
+        messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
+    } else {
+        messageFinish.innerHTML = `<p>You have completed the session.</p>`;
+    }
 }
 
 
