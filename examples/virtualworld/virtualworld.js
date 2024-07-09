@@ -299,9 +299,9 @@ function removeCharacter(id) {
     let character = document.querySelector(`#${id}`);
     if (character) {
         character.parentNode.removeChild(character);
-    } else {
-        console.error(`Character with id ${id} not found`);
-    }
+    };// else {
+    //    console.error(`Character with id ${id} not found`);
+    //}
 }
 
 function showCharacterName(event) {
@@ -322,7 +322,8 @@ function hideCharacterName() {
 
 
 
-document.addEventListener('keydown', function(event) {
+// Define the function separately
+function handleKeyDown(event) {
     switch(event.code) {
         case 'ArrowUp':
             moveCamera('forward');
@@ -337,7 +338,7 @@ document.addEventListener('keydown', function(event) {
             rotateCamera('right');
             break;
     }
-});
+}
 
 function moveCamera(direction) {
     let cameraPosition = cameraEl.object3D.position;
@@ -455,6 +456,7 @@ function startSession(sessionInfo) {
             - Displays the game screen
             - Display the scene
             - Logs the start of the game with the session ID and timestamp
+            - Start an event listener for key presses that control the avatar
             - Add client player (this user) avatar
             - Tell the client which player they are
             - Starts a new game
@@ -474,6 +476,8 @@ function startSession(sessionInfo) {
 
     //let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
     
+    // Add the event listener for key presses
+    document.addEventListener('keydown', handleKeyDown);
 
     // Add this player's avatar 
     addSelf( sessionInfo.arrivalIndex ); 
@@ -499,6 +503,7 @@ function endSession(sessionInfo) {
         This function does the following:
             - Displays the finish screen (hides all other divs)
             - Hide and disable the scene
+            - Remove the keypress event listener
             - Checks if any players terminated their session abnormally
                 - If so, an "abnormal termination" message is created
                 - If not, then the session completed normally
@@ -513,6 +518,9 @@ function endSession(sessionInfo) {
     scene.style.display = 'none';
 
     info.style.display = 'none';
+
+    // Later, remove the event listener
+    document.removeEventListener('keydown', handleKeyDown);
 
     if (sessionInfo.sessionErrorCode != 0) {
         messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
