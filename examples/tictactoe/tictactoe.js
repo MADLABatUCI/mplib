@@ -39,7 +39,13 @@ updateConfigFromUrl( sessionConfig );
 
 // List names of the callback functions that are used in this code (so MPLIB knows which functions to trigger)
 let funList = { 
-    sessionChangeFunction: sessionChange,
+    sessionChangeFunction: {
+        joinedWaitingRoom: joinWaitingRoom,
+        updateWaitingRoom: updateWaitingRoom,
+        startSession: startSession,
+        updateOngoingSession: updateOngoingSession,
+        endSession: endSession
+    },
     receiveStateChangeFunction: receiveStateChange,
     evaluateUpdateFunction: evaluateUpdate,
     removePlayerStateFunction: removePlayerState
@@ -267,13 +273,15 @@ function removePlayerState( playerId ) {
 //   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
-function sessionChange(sessionInfo, typeChange) {
-    // typeChange can be the following
-    // 'joinedWaitingRoom'
-    // 'updateWaitingRoom'
-    // 'startSession'
-    // 'updateOngoingSession'
-    // 'endSession'
+function joinWaitingRoom(sessionInfo) {
+    /*
+        Functionality to invoke when joining a waiting room.
+
+        This function does the following:
+            - Determines the number of players needed for the game
+            - Creates an appropriate message based on players needed and players in waiting room
+            - Displays the waiting room screen
+    */
     thisSession = sessionInfo;
 
     let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
@@ -281,55 +289,86 @@ function sessionChange(sessionInfo, typeChange) {
     let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
     messageWaitingRoom.innerText = str2;
 
-    if (typeChange === 'joinedWaitingRoom') {
-            instructionsScreen.style.display = 'none';
-            waitingRoomScreen.style.display = 'block';
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'block';
+}
+
+function updateWaitingRoom(sessionInfo) {
+    /*
+        Functionality to invoke when updating the waiting room.
+
+        This function does the following:
+            - Displays the waiting room screen
+            - Checks the status of the current session
+                - If the status is 'waitingRoomCountdown' then the game will start
+                - otherwise continue waiting
+            - Displays a 'game will start' message if appropriate
+    */
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'block';
+    if (sessionInfo.status === 'waitingRoomCountdown') {
+        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+        messageWaitingRoom.innerText = str2;
     }
+}
 
-    if (typeChange === 'updateWaitingRoom') {
-            instructionsScreen.style.display = 'none';
-            waitingRoomScreen.style.display = 'block';
-            if (sessionInfo.status === 'waitingRoomCountdown') {
-                str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
-                messageWaitingRoom.innerText = str2;
-            }
-    }
+function startSession(sessionInfo) {
+    /*
+        Funtionality to invoke when starting a session.
 
-    if (typeChange === 'startSession') {
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'none';
-        gameScreen.style.display = 'block';
-        
-        let dateString = timeStr(sessionInfo.sessionStartedAt);
-        let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
-        myconsolelog( str );
+        This function does the following:
+            - Displays the game screen
+            - Logs the start of the game with the session ID and timestamp
+            - Displays a "game started" message
+            - Starts a new game
+    */
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'none';
+    gameScreen.style.display = 'block';
+    
+    let dateString = timeStr(sessionInfo.sessionStartedAt);
+    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
+    myconsolelog( str );
 
-        let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-        //messageGame.innerHTML = str2;
+    let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+    //messageGame.innerHTML = str2;
 
-        thisSession = sessionInfo;
-        newGame();
-    }
+    thisSession = sessionInfo;
+    newGame();
+}
 
-    if (typeChange === 'updateOngoingSession') {
+function updateOngoingSession(sessionInfo) {
+    /*
+        Functionality to invoke when updating an ongoing session.
 
-    }
+        This function is currently empty.
+    */
+}
 
-    if (typeChange === 'endSession') {
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'none';
-        gameScreen.style.display = 'none';
-        finishScreen.style.display = 'block';
+function endSession(sessionInfo) {
+    /*
+        Functionality to invoke when ending a session.
 
-        // Check if any of the players terminated the session abnormally
-        let players = sessionInfo.allPlayersEver; 
-        const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
+        This function does the following:
+            - Displays the finish screen (hides all other divs)
+            - Checks if any players terminated their session abnormally
+                - If so, an "abnormal termination" message is created
+                - If not, then the session completed normally
+            - Displays a message based on the termination status [normal, abnormal]
+    */
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'none';
+    gameScreen.style.display = 'none';
+    finishScreen.style.display = 'block';
 
-        if (hasAbnormalStatus) {
-            messageFinish.innerHTML = `<p>Session ended abnormally by another player disconnecting or closing a window</p>`;
-        } else {
-            messageFinish.innerHTML = `<p>You have completed the session.</p>`;
-        }
+    // Check if any of the players terminated the session abnormally
+    let players = sessionInfo.allPlayersEver; 
+    const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
+
+    if (hasAbnormalStatus) {
+        messageFinish.innerHTML = `<p>Session ended abnormally by another player disconnecting or closing a window</p>`;
+    } else {
+        messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }
 }
 
