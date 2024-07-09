@@ -352,6 +352,7 @@ function startSession() {
 window.addEventListener('beforeunload', function (event) {
     if (si.sessionInitiated) {
         // Only remove this player when the session started
+        recordSessionEvent( si , 'closedWindow' );
         sessionUpdate('remove', si.playerId, 'abnormal');
         callback_removePlayerState( si.playerId );
     }
