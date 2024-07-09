@@ -602,7 +602,7 @@ function updateWaitingRoom(sessionInfo) {
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
     if (sessionInfo.status === 'waitingRoomCountdown') {
-        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+        let str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
         messageWaitingRoom.innerText = str2;
     }
 }

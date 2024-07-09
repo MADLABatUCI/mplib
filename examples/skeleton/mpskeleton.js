@@ -163,7 +163,7 @@ function updateWaitingRoom(sessionInfo) {
 
     // Waiting Room is full and we can start game
     if (sessionInfo.status === 'waitingRoomCountdown') {
-        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+        let str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
         messageWaitingRoom.innerText = str2;
     } else { // Still waiting for more players, update wait count
         let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
