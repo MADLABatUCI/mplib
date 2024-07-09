@@ -39,8 +39,7 @@ updateConfigFromUrl( sessionConfig );
 
 // List names of the callback functions that are used in this code (so MPLIB knows which functions to trigger)
 let funList = { 
-    //sessionChangeFunction: sessionChange,
-    sessionChangeFunctionv2: {
+    sessionChangeFunction: {
         joinedWaitingRoom: joinWaitingRoom,
         updateWaitingRoom: updateWaitingRoom,
         startSession: startSession,
