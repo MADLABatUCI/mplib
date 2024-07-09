@@ -25,7 +25,7 @@ let studyId;
 let verbosity;
 let stateRef;
 let presenceRef, connectedRef, otherPresenceRef;
-let sessionsRef, recordEventsRef, recordPlayerRef;
+let sessionsRef, recordEventsRef;
 let offsetRef;
 let serverTimeOffset = 0; // default
 let numPlayersBefore = 0;
@@ -156,7 +156,6 @@ function triggerSessionCallback( session , sessionId ) {
         si.arrivalIndex = session.players[si.playerId].arrivalIndex;
         numPlayersBefore = si.numPlayers;
         si.status = 'waitingRoomStarted';
-        recordSessionEvent( si , 'joinedWaitingRoom' );      
         callback_sessionChange.joinedWaitingRoom(si); // trigger callback 
     } else if ((currentStatus == 'active') & (!si.sessionStarted)) {
         si.sessionInitiated = true;
@@ -169,7 +168,6 @@ function triggerSessionCallback( session , sessionId ) {
         
         if (sessionConfig.exitDelayWaitingRoom==0) {
             si.status = 'sessionStarted';
-            recordSessionEvent( si , si.status );
             startSession(); // Can start the session without delay
         } else {
             // Delay the start of entering the session
@@ -184,7 +182,6 @@ function triggerSessionCallback( session , sessionId ) {
                 } else {
                     clearInterval(intervalId); 
                     si.status = 'sessionStarted';
-                    recordSessionEvent( si , si.status );
                     startSession();
                 }
             }, 1000);
@@ -193,7 +190,6 @@ function triggerSessionCallback( session , sessionId ) {
     } else if (si.numPlayers !== numPlayersBefore) {
         numPlayersBefore = si.numPlayers;
         if (currentStatus == 'waiting') {
-            recordSessionEvent( si , 'updateWaitingRoom' );
             callback_sessionChange.updateWaitingRoom(si);
         }
         if (currentStatus == 'active') {
@@ -202,7 +198,6 @@ function triggerSessionCallback( session , sessionId ) {
                 // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
                 // ...
             } else {
-                recordSessionEvent( si , 'updateOngoingSession' );
                 callback_sessionChange.updateOngoingSession(si);                                        
                 
                 // Check if the number of players is below the minimum
@@ -211,7 +206,6 @@ function triggerSessionCallback( session , sessionId ) {
                     //si.sessionErrorCode = 3;
                     //si.sessionErrorMsg = 'Number of players fell below minimum needed';
                     si.status = 'endSession';
-                    recordSessionEvent( si , si.status );
                     leaveSession();
                     
                 }                                         
@@ -261,7 +255,6 @@ export function joinSession() {
                     si.status = 'endSession';
                     si.sessionErrorCode = 2;
                     si.sessionErrorMsg = 'Session Disconnected';
-                    recordSessionEvent( si , si.status );
                     callback_sessionChange.endSession(si);
                 }
             });
@@ -294,7 +287,6 @@ export async function leaveSession() {
         // If this transaction is successful...
         si.status = 'endSession';
 
-        recordSessionEvent( si , 'endSession' );
         callback_sessionChange.endSession(si);
     });  
 }
@@ -307,12 +299,8 @@ function startSession() {
     // Create a path to store all recorded events related to state changes 
     recordEventsRef = ref(db, `${studyId}/recordedData/${si.sessionId}/events/`);
 
-    // Create a path to store all recorded player level information
-    recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);
-    recordPlayerData( 'urlparams', getUrlParameters() );
-    recordPlayerData( 'sessionInfo' , si );
-
     
+
     // Create a listener for changes in the state 
     onChildChanged(stateRef, (snapshot) => {
         const nodeName = snapshot.key;
@@ -351,8 +339,21 @@ function startSession() {
 // Handle event of player closing browser window
 window.addEventListener('beforeunload', function (event) {
     if (si.sessionInitiated) {
-        // Only remove this player when the session started
-        recordSessionEvent( si , 'closedWindow' );
+        // Only remove this player when the session started      
+        if (sessionConfig.recordData) {              
+            // Update the database here because the browser apparently will not wait until the transaction is finished and therefore 
+            // will not execute the updating of the players data   
+            let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);
+
+            // Get the object that stores all information about this player
+            let playerInfo = {}; 
+
+            // Add the time that the player left
+            playerInfo.finishStatus = 'abnormal';
+            playerInfo.leftGameAt = serverTimestamp(); 
+            update(recordPlayerRef, playerInfo);
+        } 
+
         sessionUpdate('remove', si.playerId, 'abnormal');
         callback_removePlayerState( si.playerId );
     }
@@ -409,33 +410,6 @@ function recordEventData(path, state, skipRecord ) {
     } 
 }
 
-function recordSessionEvent( si , status ) {
-    // Are we recording the data?
-    if (sessionConfig.recordData) {
-        // Create a path to store all recorded gamestates   
-        let recordSessionRef = ref(db, `${studyId}/recordedData/${si.sessionId}/session/`);
-
-        let returnResult = {
-            sessionInfo: si,
-            status,
-            serverTimeStamp: serverTimestamp(),
-        };
-        
-        let newDataRef = push(recordSessionRef);
-        set(newDataRef, returnResult);
-    } 
-}
-
-function recordPlayerData( field, value ) {
-    // Are we recording the data?
-    if (sessionConfig.recordData) {
-        let returnResult = {
-            [field]: value,
-        };    
-        //let newDataRef = push(recordPlayerRef);
-        update(recordPlayerRef, returnResult);
-    } 
-}
 
 // The updateStateTransaction function uses a transaction to address concurrency issues (i.e., multiple players all making moves at the same time).
 export async function updateStateTransaction(path, action, actionArgs) {
@@ -539,6 +513,17 @@ async function sessionUpdate(action, thisPlayer, extraArg ) {
         let newState = result.snapshot.val();
         if (!result.committed) {
             myconsolelog('Transaction failed');
+        } else {
+            if ((sessionConfig.recordData) && ( (action == 'join') || (action=='remove') )) {
+                // If recording data, only record players joining or leaving
+                  
+                // Get a database reference to the player we are updating  
+                let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${thisPlayer}/`);
+
+                // Get the object that stores all information about this player
+                let playerInfo = newState[si.sessionId].allPlayersEver[thisPlayer];   
+                update(recordPlayerRef, playerInfo);
+            } 
         }
 
         let returnResult = {
@@ -606,8 +591,15 @@ function removePlayerSession( allSessions , thisPlayer, finishStatus ) {
                         let sortedPlayerIds = sortPlayersTime(sessionOther.players);
                         let playerIdOther = sortedPlayerIds[0];
 
-                        // Copy over the data
-                        let playerData1 = { waitingRoomStartedAt: sessionOther.players[playerIdOther].waitingRoomStartedAt, sessionStartedAt: 0 };
+                        // Copy over the data (FIX THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!)
+                        //let playerData1 = { waitingRoomStartedAt: sessionOther.players[playerIdOther].waitingRoomStartedAt, sessionStartedAt: 0 };
+                        let playerData1 = { ...sessionOther.players[playerIdOther] };
+                        
+
+                        // What should arrivalIndex be???????
+                        //
+                        //
+                        //
 
                         // Delete player from the session it is associated with
                         delete sessionOther.players[playerIdOther];
@@ -701,7 +693,8 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
                     numBlurred: 0,
                     arrivalIndex: count,
                     leftGameAt: 0,
-                    finishStatus: 'na'
+                    finishStatus: 'na',
+                    urlparams: getUrlParameters()
                 };
                 allSessions[proposedSessionId].players[thisPlayer] = playerData1;
                 allSessions[proposedSessionId].allPlayersEver[thisPlayer] = playerData1;
@@ -760,7 +753,8 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
                 numBlurred: 0,
                 arrivalIndex: 1,
                 leftGameAt: 0,
-                finishStatus: 'na'
+                finishStatus: 'na',
+                urlparams: getUrlParameters()
             };
             let playerData2 = { [thisPlayer]: playerData1 };
             let saveData = {
