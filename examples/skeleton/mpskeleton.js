@@ -17,7 +17,7 @@ import {
     updateStateTransaction,  
     hasControl,
     getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
-    getPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError
+    getPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
 
@@ -33,7 +33,7 @@ let sessionConfig = {
     maxPlayersNeeded: 3, // Maximum number of players allowed in a session
     maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
     allowReplacements: true, // Allow replacing any players who leave an ongoing session?
-    exitDelayWaitingRoom: 0, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
+    exitDelayWaitingRoom: 5, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
     maxHoursSession: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
     recordData: false // Record all data?  
 };
@@ -165,8 +165,9 @@ function updateWaitingRoom() {
     waitingRoomScreen.style.display = 'block';
 
     // Waiting Room is full and we can start game
-    if (sessionInfo.status === 'waitingRoomCountdown') {
-        let str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+    let [ doCountDown , secondsLeft ] = getWaitRoomInfo();
+    if (doCountDown) {
+        let str2 = `Game will start in ${ secondsLeft } seconds...`;
         messageWaitingRoom.innerText = str2;
     } else { // Still waiting for more players, update wait count
         let numPlayers = getNumberCurrentPlayers(); // the current number of players

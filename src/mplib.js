@@ -91,6 +91,12 @@ export function getSessionError() {
     return obj;
 }
 
+export function getWaitRoomInfo() {
+    let doCountDown = ( si.status === 'waitingRoomCountdown');
+    let secondsLeft = si.countdown;
+    return [ doCountDown, secondsLeft ];
+}
+
 // Initialize the session parameters, name of the study, and list of functions that are used for the callbacks
 export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbosityNow ) {
     sessionConfig = sessionConfigNow; // session parameters
