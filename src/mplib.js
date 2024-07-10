@@ -48,6 +48,48 @@ const db = getDatabase(firebaseApp);
 //------------------------------------------------------
 // Define some new functions we can use in other code
 //------------------------------------------------------
+export function getCurrentPlayerId() {
+    return si.playerId;
+}
+
+export function getCurrentPlayerIds() {
+    return si.playerIds;
+}
+
+export function getAllPlayerIds() {
+    return Object.keys( si.allPlayersEver );
+}
+
+export function getPlayerInfo( playerId ) {
+    return si.allPlayersEver[ playerId ];
+}
+
+export function getNumberCurrentPlayers() {
+    return si.playerIds.length;
+}
+
+export function getNumberAllPlayers() {
+    return Object.keys( si.allPlayersEver ).length;
+}
+
+export function getPlayerArrivalIndex( playerId ) {
+    return si.allPlayersEver[ playerId ].arrivalIndex;
+}
+
+export function getSessionId() {
+    return si.sessionId;
+}
+
+export function anyPlayerTerminatedAbnormally() {
+    let players = si.allPlayersEver; 
+    const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
+    return hasAbnormalStatus;
+}
+
+export function getSessionError() {
+    let obj = { errorCode: si.sessionErrorCode, errorMsg: si.sessionErrorMsg };
+    return obj;
+}
 
 // Initialize the session parameters, name of the study, and list of functions that are used for the callbacks
 export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbosityNow ) {
@@ -125,10 +167,7 @@ function initSessionInfo() {
         sessionIndex: null, 
         arrivalIndex: null, 
         arrivalIndices: [],
-        waitingRoomStartedAt: null, 
-        timeElapsedToWaitingRoom: null,
         countdown: null,
-        sessionStartedAt: null,
         sessionErrorCode: 0,
         sessionErrorMsg: '',
         sessionInitiated: false,
@@ -144,10 +183,7 @@ function triggerSessionCallback( session , sessionId ) {
     si.allPlayersEver = session.allPlayersEver; 
     si.arrivalIndices = Object.values(session.players).map(player => player.arrivalIndex);
     si.countdown = null;
-    si.waitingRoomStartedAt = session.waitingRoomStartedAt;
-    //si.timeElapsedToWaitingRoom = session.timeElapsedToWaitingRoom; // time elapsed (in msec) from start of library (reading instructions to wait room)
-
-
+    
     if ((currentStatus == 'waiting') & (!si.sessionInitiated)) {
         si.sessionInitiated = true;
         si.sessionStarted = false;
@@ -156,7 +192,7 @@ function triggerSessionCallback( session , sessionId ) {
         si.arrivalIndex = session.players[si.playerId].arrivalIndex;
         numPlayersBefore = si.numPlayers;
         si.status = 'waitingRoomStarted';
-        callback_sessionChange.joinedWaitingRoom(si); // trigger callback 
+        callback_sessionChange.joinedWaitingRoom(); // trigger callback 
     } else if ((currentStatus == 'active') & (!si.sessionStarted)) {
         si.sessionInitiated = true;
         si.sessionStarted = true;
@@ -164,7 +200,6 @@ function triggerSessionCallback( session , sessionId ) {
         si.sessionIndex = session.sessionIndex;
         si.arrivalIndex = session.players[si.playerId].arrivalIndex;
         numPlayersBefore = si.numPlayers;
-        si.sessionStartedAt = session.sessionStartedAt;
         
         if (sessionConfig.exitDelayWaitingRoom==0) {
             si.status = 'sessionStarted';
@@ -177,7 +212,7 @@ function triggerSessionCallback( session , sessionId ) {
                 if (remainingSeconds > 0) {
                     si.status = 'waitingRoomCountdown';
                     si.countdown = remainingSeconds;
-                    callback_sessionChange.updateWaitingRoom(si);
+                    callback_sessionChange.updateWaitingRoom();
                     remainingSeconds--;
                 } else {
                     clearInterval(intervalId); 
@@ -190,15 +225,14 @@ function triggerSessionCallback( session , sessionId ) {
     } else if (si.numPlayers !== numPlayersBefore) {
         numPlayersBefore = si.numPlayers;
         if (currentStatus == 'waiting') {
-            callback_sessionChange.updateWaitingRoom(si);
+            callback_sessionChange.updateWaitingRoom();
         }
         if (currentStatus == 'active') {
-            si.sessionStartedAt = session.sessionStartedAt;
             if (si.status == 'waitingRoomCountdown') {
                 // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
                 // ...
             } else {
-                callback_sessionChange.updateOngoingSession(si);                                        
+                callback_sessionChange.updateOngoingSession();                                        
                 
                 // Check if the number of players is below the minimum
                 if (si.numPlayers < sessionConfig.minPlayersNeeded) {
@@ -237,7 +271,7 @@ export function joinSession() {
             si.sessionErrorCode = 1;
             si.sessionErrorMsg = 'Unable to join session';
             si.status = 'endSession';
-            callback_sessionChange.endSession(si);
+            callback_sessionChange.endSession();
         } else {
             // Now that we are in a session (active or waiting room), keep track of presence
             presenceRef = ref(db, `${studyId}/presence/${si.playerId}`);
@@ -255,7 +289,7 @@ export function joinSession() {
                     si.status = 'endSession';
                     si.sessionErrorCode = 2;
                     si.sessionErrorMsg = 'Session Disconnected';
-                    callback_sessionChange.endSession(si);
+                    callback_sessionChange.endSession();
                 }
             });
         }
@@ -297,7 +331,7 @@ export async function leaveSession() {
         // If this transaction is successful...
         si.status = 'endSession';
 
-        callback_sessionChange.endSession(si);
+        callback_sessionChange.endSession();
     });  
 }
 
@@ -343,7 +377,7 @@ function startSession() {
     });
 
     // Invoke function at client
-    callback_sessionChange.startSession(si);
+    callback_sessionChange.startSession();
 }
 
 // Handle event of player closing browser window
