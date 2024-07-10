@@ -160,6 +160,7 @@ function updateWaitingRoom() {
                 - otherwise continue waiting
             - Displays a 'game will start' message if appropriate
     */
+   
     // switch screens from instruction to waiting room
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
