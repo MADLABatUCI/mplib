@@ -12,7 +12,9 @@ import {
     leaveSession,
     updateStateDirect,
     updateStateTransaction,  
-    hasControl
+    hasControl,
+    getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
+    getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
 // -------------------------------------

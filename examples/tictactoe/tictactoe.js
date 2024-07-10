@@ -13,7 +13,9 @@ import {
     leaveSession,
     updateStateDirect,
     updateStateTransaction, 
-    hasControl
+    hasControl,
+    getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
+    getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
 
@@ -58,7 +60,6 @@ initializeMPLIB( sessionConfig , studyId , funList, verbosity );
 //       Globals
 // -------------------------------------
 let gameState;
-let thisSession;
 let emptyPlace = ' '; // this character represents the absence of a token and a lack of a winner (it is tempting to use "null" for this state, but firebase does not store any null variables and this can complicate the coding)
 let delayStartNewGame = 3000;
 
@@ -167,8 +168,8 @@ function updateUI() {
         str = 'Draw!';
     } else {
         // Is it this player's turn?
-        if (((thisSession.arrivalIndex===1) && (gameState.currentPlayer === gameState.firstArrival)) ||   
-            ((thisSession.arrivalIndex===2) && (gameState.currentPlayer !== gameState.firstArrival))) {
+        if (((getCurrentPlayerArrivalIndex()===1) && (gameState.currentPlayer === gameState.firstArrival)) ||   
+            ((getCurrentPlayerArrivalIndex()===2) && (gameState.currentPlayer !== gameState.firstArrival))) {
             str = `You are player ${gameState.currentPlayer}. It is your turn...`
         } else {
             str = `Waiting for the other player...`
@@ -232,8 +233,8 @@ function evaluateUpdate( path, state, action, actionArgs ) {
 
     if ((action === 'placeToken') && (state.winner === emptyPlace )) {
         // Is it this player's turn?
-        if (((thisSession.arrivalIndex===1) && (state.currentPlayer === state.firstArrival)) ||   
-            ((thisSession.arrivalIndex===2) && (state.currentPlayer !== state.firstArrival))) {
+        if (((getCurrentPlayerArrivalIndex()===1) && (state.currentPlayer === state.firstArrival)) ||   
+            ((getCurrentPlayerArrivalIndex()===2) && (state.currentPlayer !== state.firstArrival))) {
 
             // Can a token be placed here?
             let placeIndex = actionArgs;
@@ -273,46 +274,61 @@ function removePlayerState( playerId ) {
 //   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
-function joinWaitingRoom(sessionInfo) {
+function joinWaitingRoom() {
     /*
         Functionality to invoke when joining a waiting room.
 
         This function does the following:
+            - Get the current player's playerId
             - Determines the number of players needed for the game
             - Creates an appropriate message based on players needed and players in waiting room
             - Displays the waiting room screen
     */
-    thisSession = sessionInfo;
 
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let numPlayers = sessionInfo.numPlayers;
+    let playerId = getCurrentPlayerId(); // the playerId for this client
+    let numPlayers = getNumberCurrentPlayers(); // the current number of players
+    let numNeeded = sessionConfig.minPlayersNeeded - numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
+    
     let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
     messageWaitingRoom.innerText = str2;
-
+    
+    // switch screens from instruction to waiting room
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
 }
 
-function updateWaitingRoom(sessionInfo) {
+function updateWaitingRoom() {
     /*
         Functionality to invoke when updating the waiting room.
 
         This function does the following:
             - Displays the waiting room screen
-            - Checks the status of the current session
-                - If the status is 'waitingRoomCountdown' then the game will start
+            - Checks the status of the waiting room through the getWaitRoomInfo() function
+                - If the flag doCountDown is true, then the game will start after a countdown
                 - otherwise continue waiting
             - Displays a 'game will start' message if appropriate
     */
+   
+    // switch screens from instruction to waiting room
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
-    if (sessionInfo.status === 'waitingRoomCountdown') {
-        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+
+    // Waiting Room is full and we can start game
+    let [ doCountDown , secondsLeft ] = getWaitRoomInfo();
+    if (doCountDown) {
+        let str2 = `Game will start in ${ secondsLeft } seconds...`;
+        messageWaitingRoom.innerText = str2;
+    } else { // Still waiting for more players, update wait count
+        let numPlayers = getNumberCurrentPlayers(); // the current number of players
+        let numNeeded = sessionConfig.minPlayersNeeded - numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
+        
+        let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
         messageWaitingRoom.innerText = str2;
     }
 }
 
-function startSession(sessionInfo) {
+
+function startSession() {
     /*
         Funtionality to invoke when starting a session.
 
@@ -326,18 +342,18 @@ function startSession(sessionInfo) {
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
     
-    let dateString = timeStr(sessionInfo.sessionStartedAt);
-    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
+    let playerId = getCurrentPlayerId(); // the playerId for this client
+    let dateString = timeStr(getPlayerInfo( playerId ).sessionStartedAt);
+    let str = `Started game with session id ${getSessionId()} with ${getNumberCurrentPlayers()} players at ${dateString}.`;
     myconsolelog( str );
 
-    let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+    let str2 = `<p>The game has started...</p><p>Number of players: ${ getNumberCurrentPlayers()}</p><p>Session ID: ${getSessionId()}$</p>`;
     //messageGame.innerHTML = str2;
 
-    thisSession = sessionInfo;
     newGame();
 }
 
-function updateOngoingSession(sessionInfo) {
+function updateOngoingSession() {
     /*
         Functionality to invoke when updating an ongoing session.
 
@@ -345,7 +361,7 @@ function updateOngoingSession(sessionInfo) {
     */
 }
 
-function endSession(sessionInfo) {
+function endSession() {
     /*
         Functionality to invoke when ending a session.
 
@@ -361,12 +377,26 @@ function endSession(sessionInfo) {
     gameScreen.style.display = 'none';
     finishScreen.style.display = 'block';
 
-    // Check if any of the players terminated the session abnormally
-    let players = sessionInfo.allPlayersEver; 
-    const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
+    if ( anyPlayerTerminatedAbnormally()) {
+        // Add your own code below for handling case where another player closed their window or were disconnected prematurely
+        // Note that this is an issue with games that have a predefined number of players, but might not be an issue with experiments with
+        // a flexible number of players 
+        // ....
+    }
 
-    if (hasAbnormalStatus) {
-        messageFinish.innerHTML = `<p>Session ended abnormally by another player disconnecting or closing a window</p>`;
+    let err = getSessionError();
+    if (err.errorCode != 0) {
+        messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${err.errorMsg}</p>`;
+        
+        if (err.errorCode==1) {
+            // Add your own code below for handling case of no sessions being available 
+            // .... 
+        }
+
+        if (err.errorCode==2) {
+            // Add your own code below for handling case of this client being disconnected (e.g. internet connectivity issues) 
+            // .... 
+        }
     } else {
         messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }

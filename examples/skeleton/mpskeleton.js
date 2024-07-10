@@ -17,7 +17,7 @@ import {
     updateStateTransaction,  
     hasControl,
     getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
-    getPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
+    getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
 
@@ -155,8 +155,8 @@ function updateWaitingRoom() {
 
         This function does the following:
             - Displays the waiting room screen
-            - Checks the status of the current session
-                - If the status is 'waitingRoomCountdown' then the game will start
+            - Checks the status of the waiting room through the getWaitRoomInfo() function
+                - If the flag doCountDown is true, then the game will start after a countdown
                 - otherwise continue waiting
             - Displays a 'game will start' message if appropriate
     */
@@ -206,7 +206,8 @@ function startSession() {
     str2 += `<p>Current number of players (${numPlayers} total):`;
     for (let i=0; i<numPlayers; i++) {
         let playerNow = playerIds[i];
-        str2 += `<br>Arrival #${getPlayerArrivalIndex(playerNow)},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        let playerInfo = getPlayerInfo( playerNow );
+        str2 += `<br>Arrival #${playerInfo.arrivalIndex},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
     }
     str2 += `</p>`;
 
@@ -216,7 +217,7 @@ function startSession() {
     for (let i=0; i<numPlayersEver; i++) {
         let playerNow = allPlayersEver[i];
         let playerInfo = getPlayerInfo( playerNow );
-        str2 += `<br>Arrival #${getPlayerArrivalIndex(playerNow)}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        str2 += `<br>Arrival #${playerInfo.arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
         str2 += ` Arrival time: ${timeStr(playerInfo.sessionStartedAt)}`;
         if (playerInfo.leftGameAt != 0) {
             str2 += ` Finish time: ${timeStr(playerInfo.leftGameAt)}`;
@@ -256,7 +257,8 @@ function updateOngoingSession() {
     str2 += `<p>Current number of players (${numPlayers} total):`;
     for (let i=0; i<numPlayers; i++) {
         let playerNow = playerIds[i];
-        str2 += `<br>Arrival #${getPlayerArrivalIndex(playerNow)},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        let playerInfo = getPlayerInfo( playerNow );
+        str2 += `<br>Arrival #${playerInfo.arrivalIndex},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
     }
     str2 += `</p>`;
 
@@ -266,7 +268,7 @@ function updateOngoingSession() {
     for (let i=0; i<numPlayersEver; i++) {
         let playerNow = allPlayersEver[i];
         let playerInfo = getPlayerInfo( playerNow );
-        str2 += `<br>Arrival #${getPlayerArrivalIndex(playerNow)}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        str2 += `<br>Arrival #${playerInfo.arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
         str2 += ` Arrival time: ${timeStr(playerInfo.sessionStartedAt)}`;
         if (playerInfo.leftGameAt != 0) {
             str2 += ` Finish time: ${timeStr(playerInfo.leftGameAt)}`;

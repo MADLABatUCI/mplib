@@ -72,8 +72,8 @@ export function getNumberAllPlayers() {
     return Object.keys( si.allPlayersEver ).length;
 }
 
-export function getPlayerArrivalIndex( playerId ) {
-    return si.allPlayersEver[ playerId ].arrivalIndex;
+export function getCurrentPlayerArrivalIndex() {
+    return si.allPlayersEver[ si.playerId ].arrivalIndex;
 }
 
 export function getSessionId() {
@@ -213,6 +213,10 @@ function triggerSessionCallback( session , sessionId ) {
         } else {
             // Delay the start of entering the session
             let remainingSeconds = sessionConfig.exitDelayWaitingRoom;
+
+            si.status = 'waitingRoomCountdown';
+            si.countdown = remainingSeconds;
+            callback_sessionChange.updateWaitingRoom();
 
             intervalId = setInterval(() => {
                 if (remainingSeconds > 0) {
@@ -643,12 +647,6 @@ function removePlayerSession( allSessions , thisPlayer, finishStatus ) {
                         //let playerData1 = { waitingRoomStartedAt: sessionOther.players[playerIdOther].waitingRoomStartedAt, sessionStartedAt: 0 };
                         let playerData1 = { ...sessionOther.players[playerIdOther] };
                         
-
-                        // What should arrivalIndex be???????
-                        //
-                        //
-                        //
-
                         // Delete player from the session it is associated with
                         delete sessionOther.players[playerIdOther];
                         delete sessionOther.allPlayersEver[playerIdOther];
@@ -659,7 +657,12 @@ function removePlayerSession( allSessions , thisPlayer, finishStatus ) {
                             delete allSessions[sessionIdOther];
                         }
 
-                        // move player data over                           
+                        // move player data over 
+                        let getTimeNow = serverTimestamp();
+                        allSessions[sessionIdThis].numPlayersEverJoined += 1;
+                        playerData1.arrivalIndex = allSessions[sessionIdThis].numPlayersEverJoined;
+                        playerData1.sessionStartedAt = getTimeNow;
+                        
                         allSessions[sessionIdThis].players[playerIdOther] = playerData1;
                         allSessions[sessionIdThis].allPlayersEver[playerIdOther] = playerData1;
 
@@ -680,12 +683,7 @@ function removePlayerSession( allSessions , thisPlayer, finishStatus ) {
 
                                 // Set the start time for the session
                                 allSessions[sessionIdThis].sessionStartedAt = serverTimestamp();
-                            } else {
-                                // Just assign the start time for this player
-                                let getTimeNow = serverTimestamp();
-                                allSessions[sessionIdThis].players[playerIdOther].sessionStartedAt = getTimeNow;
-                                allSessions[sessionIdThis].allPlayersEver[playerIdOther].sessionStartedAt = getTimeNow;
-                            }
+                            } 
                         }
 
                         break;
