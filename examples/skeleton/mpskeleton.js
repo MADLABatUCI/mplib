@@ -33,7 +33,7 @@ let sessionConfig = {
     maxPlayersNeeded: 3, // Maximum number of players allowed in a session
     maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
     allowReplacements: true, // Allow replacing any players who leave an ongoing session?
-    exitDelayWaitingRoom: 5, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
+    exitDelayWaitingRoom: 0, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
     maxHoursSession: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
     recordData: false // Record all data?  
 };
@@ -118,7 +118,7 @@ function evaluateUpdate( path, state, action, actionArgs ) {
 }
 
 // Function triggered when this client closes the window and the player needs to be removed from the state 
-function removePlayerState( playerId ) {
+function removePlayerState() {
 
 }
 
@@ -298,26 +298,14 @@ function endSession() {
     gameScreen.style.display = 'none';
     finishScreen.style.display = 'block';
 
-    if ( anyPlayerTerminatedAbnormally()) {
-        // Add your own code below for handling case where another player closed their window or were disconnected prematurely
-        // Note that this is an issue with games that have a predefined number of players, but might not be an issue with experiments with
-        // a flexible number of players 
-        // ....
-    }
-
     let err = getSessionError();
-    if (err.errorCode != 0) {
-        messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${err.errorMsg}</p>`;
-        
-        if (err.errorCode==1) {
-            // Add your own code below for handling case of no sessions being available 
-            // .... 
-        }
 
-        if (err.errorCode==2) {
-            // Add your own code below for handling case of this client being disconnected (e.g. internet connectivity issues) 
-            // .... 
-        }
+    if (err.errorCode == 1) {
+        // No sessions available
+        messageFinish.innerHTML = `<p>Session ended abnormally because there are no available sessions to join</p>`;
+    } else if (err.errorCode==2) {
+        // This client was disconnected (e.g. internet connectivity issues) 
+        messageFinish.innerHTML = `<p>Session ended abnormally because you are experiencing internet connectivity issues</p>`;
     } else {
         messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }

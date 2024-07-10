@@ -321,7 +321,7 @@ export async function leaveSession() {
         } 
 
         // remove this player from the game state
-        callback_removePlayerState( si.playerId );
+        callback_removePlayerState();
 
         // Remove the disconnect listener....
         off(presenceRef);
@@ -409,7 +409,7 @@ window.addEventListener('beforeunload', function (event) {
         } 
 
         sessionUpdate('remove', si.playerId, 'abnormal');
-        callback_removePlayerState( si.playerId );
+        callback_removePlayerState();
     }
 });
 

@@ -157,11 +157,8 @@ function receiveStateChange(nodeName, newState, typeChange ) {
 }
 
 // Function triggered when this client closes the window and the player needs to be removed from the state 
-function removePlayerState( playerId ) {
-    //removeCharacter( playerId );
-
+function removePlayerState() {
     // Send a null state to this player in the database, which removes the database entry
-    id = `Player${si.arrivalIndex}`;
     let newState = null;
     updateStateDirect( id, newState);
 }
@@ -406,51 +403,61 @@ function showInstructions() {
 //   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
-function joinWaitingRoom(sessionInfo) {
+function joinWaitingRoom() {
     /*
         Functionality to invoke when joining a waiting room.
 
         This function does the following:
+            - Get the current player's playerId
             - Determines the number of players needed for the game
             - Creates an appropriate message based on players needed and players in waiting room
             - Displays the waiting room screen
-
-        NOTE:
-            This function is not utilized for this example
     */
-    si = sessionInfo;
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let numPlayers = sessionInfo.numPlayers;
+
+    let playerId = getCurrentPlayerId(); // the playerId for this client
+    let numPlayers = getNumberCurrentPlayers(); // the current number of players
+    let numNeeded = sessionConfig.minPlayersNeeded - numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
+    
     let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
     messageWaitingRoom.innerText = str2;
     
+    // switch screens from instruction to waiting room
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
 }
 
-function updateWaitingRoom(sessionInfo) {
+function updateWaitingRoom() {
     /*
         Functionality to invoke when updating the waiting room.
 
         This function does the following:
             - Displays the waiting room screen
-            - Checks the status of the current session
-                - If the status is 'waitingRoomCountdown' then the game will start
+            - Checks the status of the waiting room through the getWaitRoomInfo() function
+                - If the flag doCountDown is true, then the game will start after a countdown
                 - otherwise continue waiting
             - Displays a 'game will start' message if appropriate
-
-        NOTE:
-            This function is not utilized for this example
     */
+   
+    // switch screens from instruction to waiting room
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
-    if (sessionInfo.status === 'waitingRoomCountdown') {
-        let str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+
+    // Waiting Room is full and we can start game
+    let [ doCountDown , secondsLeft ] = getWaitRoomInfo();
+    if (doCountDown) {
+        let str2 = `Game will start in ${ secondsLeft } seconds...`;
+        messageWaitingRoom.innerText = str2;
+    } else { // Still waiting for more players, update wait count
+        let numPlayers = getNumberCurrentPlayers(); // the current number of players
+        let numNeeded = sessionConfig.minPlayersNeeded - numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
+        
+        let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
         messageWaitingRoom.innerText = str2;
     }
 }
 
-function startSession(sessionInfo) {
+
+function startSession() {
     /*
         Funtionality to invoke when starting a session.
 
@@ -463,8 +470,7 @@ function startSession(sessionInfo) {
             - Tell the client which player they are
             - Starts a new game
     */
-    // Set the global variable for the session
-    si = sessionInfo;
+
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
@@ -472,17 +478,16 @@ function startSession(sessionInfo) {
     scene.style.display = 'block';
     info.style.display = 'block';
     
-    let dateString = timeStr(sessionInfo.sessionStartedAt);
-    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
+    let playerId = getCurrentPlayerId(); // the playerId for this client
+    let dateString = timeStr(getPlayerInfo( playerId ).sessionStartedAt);
+    let str = `Started game with session id ${getSessionId()} with ${getNumberCurrentPlayers()} players at ${dateString}.`;
     myconsolelog( str );
-
-    //let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
     
     // Add the event listener for key presses
     document.addEventListener('keydown', handleKeyDown);
 
     // Add this player's avatar 
-    addSelf( sessionInfo.arrivalIndex ); 
+    addSelf( getCurrentPlayerArrivalIndex() ); 
 
     let str2 = `You are: ${id}`;
     messageGame.innerHTML = str2;
@@ -515,17 +520,21 @@ function endSession(sessionInfo) {
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'none';
     finishScreen.style.display = 'block';
-
     scene.style.visibility = 'hidden';
     scene.style.display = 'none';
-
     info.style.display = 'none';
 
     // Later, remove the event listener
     document.removeEventListener('keydown', handleKeyDown);
 
-    if (sessionInfo.sessionErrorCode != 0) {
-        messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
+    let err = getSessionError();
+
+    if (err.errorCode == 1) {
+        // No sessions available
+        messageFinish.innerHTML = `<p>Session ended abnormally because there are no available sessions to join</p>`;
+    } else if (err.errorCode==2) {
+        // This client was disconnected (e.g. internet connectivity issues) 
+        messageFinish.innerHTML = `<p>Session ended abnormally because you are experiencing internet connectivity issues</p>`;
     } else {
         messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }
