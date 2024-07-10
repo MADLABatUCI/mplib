@@ -266,6 +266,16 @@ export function joinSession() {
 export async function leaveSession() {
     // Run a transaction to remove this player
     sessionUpdate('remove', si.playerId, 'normal').then(result => {
+        if (sessionConfig.recordData) {                         
+            let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);
+            // Get the object that stores all information about this player
+            let playerInfo = {}; 
+            // Add the time that the player left
+            playerInfo.finishStatus = 'normal';
+            playerInfo.leftGameAt = serverTimestamp(); 
+            update(recordPlayerRef, playerInfo);
+        } 
+
         // remove this player from the game state
         callback_removePlayerState( si.playerId );
 
@@ -514,14 +524,12 @@ async function sessionUpdate(action, thisPlayer, extraArg ) {
         if (!result.committed) {
             myconsolelog('Transaction failed');
         } else {
-            if ((sessionConfig.recordData) && ( (action == 'join') || (action=='remove') )) {
-                // If recording data, only record players joining or leaving
+            if ((sessionConfig.recordData) && (action == 'join') ) {
+                // Recording data for player joining
                   
                 // Get a database reference to the player we are updating  
-                let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${thisPlayer}/`);
-
-                // Get the object that stores all information about this player
-                let playerInfo = newState[si.sessionId].allPlayersEver[thisPlayer];   
+                let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${thisPlayer}/`);        
+                let playerInfo = newState[si.sessionId].allPlayersEver[thisPlayer];              
                 update(recordPlayerRef, playerInfo);
             } 
         }
