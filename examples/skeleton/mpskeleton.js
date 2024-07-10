@@ -63,7 +63,7 @@ initializeMPLIB( sessionConfig , studyId , funList, verbosity );
 // -------------------------------------
 //       Globals
 // -------------------------------------
-let playerId;
+
 
 // -------------------------------------
 //       Graphics handles
@@ -137,7 +137,7 @@ function joinWaitingRoom() {
             - Displays the waiting room screen
     */
 
-    playerId = getCurrentPlayerId(); // the playerId for this client
+    let playerId = getCurrentPlayerId(); // the playerId for this client
     let numPlayers = getNumberCurrentPlayers(); // the current number of players
     let numNeeded = sessionConfig.minPlayersNeeded - numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
     
@@ -186,7 +186,7 @@ function startSession() {
             - Logs the start of the game with the session ID and timestamp
             - Displays additional "game started" messages
     */
-    playerId = getCurrentPlayerId(); // the playerId for this client
+    let playerId = getCurrentPlayerId(); // the playerId for this client
     let playerIds = getCurrentPlayerIds(); // the list of current players
     let numPlayers = getNumberCurrentPlayers(); // the current number of players
             
@@ -236,7 +236,7 @@ function updateOngoingSession() {
             - Currently the same code as startSession
             - Does not include the logging aspect of startSession
     */
-    playerId = getCurrentPlayerId(); // the playerId for this client
+    let playerId = getCurrentPlayerId(); // the playerId for this client
     let playerIds = getCurrentPlayerIds(); // the list of current players
     let numPlayers = getNumberCurrentPlayers(); // the current number of players
             
