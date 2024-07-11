@@ -524,7 +524,7 @@ function endSession(sessionInfo) {
     scene.style.display = 'none';
     info.style.display = 'none';
 
-    // Later, remove the event listener
+    // Remove the event listener
     document.removeEventListener('keydown', handleKeyDown);
 
     let err = getSessionError();
