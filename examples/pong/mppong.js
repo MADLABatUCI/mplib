@@ -56,8 +56,6 @@ initializeMPLIB( sessionConfig , studyId , funList, verbosity );
 // -------------------------------------
 //       Globals
 // -------------------------------------
-let arrivalIndex;
-
 let fps = 30; // Set the desired framerate here
 
 // Allow updating of some game settings by URL parameters
@@ -188,7 +186,7 @@ function movePlayerMouse(e) {
     let currentY;
 
     // if this Client arrived first in the session, this will be player 1, and player 2 otherwise
-    if (arrivalIndex == 2) { 
+    if (getCurrentPlayerArrivalIndex() == 2) { 
         currentY = player1Y;
         currentX = player1X;
         minX = 0;
@@ -233,7 +231,7 @@ function movePlayerCursorKeys(e) {
     let minX;
     let path;
     // if this Client arrived first in the session, this will be player 1, and player 2 otherwise
-    if (arrivalIndex == 2) { 
+    if (getCurrentPlayerArrivalIndex() == 2) { 
         newPlayerY = player1Y;
         newPlayerX = player1X;
         minX = 0;
