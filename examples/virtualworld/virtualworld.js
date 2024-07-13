@@ -168,8 +168,8 @@ function removePlayerState() {
 // --------------------------------------------------------------------------------------
 
 
-function addSelf( arrivalIndex ) {
-    id = `Player${arrivalIndex}`;
+function addSelf() {
+    id = `Player${ getCurrentPlayerArrivalIndex() }`;
 
     let radius = 8;
     let angle = Math.random() * 2 * Math.PI;
@@ -487,7 +487,7 @@ function startSession() {
     document.addEventListener('keydown', handleKeyDown);
 
     // Add this player's avatar 
-    addSelf( getCurrentPlayerArrivalIndex() ); 
+    addSelf(); 
 
     let str2 = `You are: ${id}`;
     messageGame.innerHTML = str2;

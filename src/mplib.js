@@ -12,14 +12,13 @@ import {
     query, orderByChild, equalTo, onDisconnect, runTransaction
 } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-database.js"; //"./firebase/firebase-database.js";  //;
 
-export let hasControl = false; // variable exposed to the client code 
-
 // si contains the session information that the client will see
 let si = {
     playerId: generateId(), // Create a random id for the player; this id is across browser windows on the same client 
 };
 //initSessionInfo();
 
+let playerHasControl;
 let sessionConfig;
 let studyId;
 let verbosity;
@@ -95,6 +94,10 @@ export function getWaitRoomInfo() {
     let doCountDown = ( si.status === 'waitingRoomCountdown');
     let secondsLeft = si.countdown;
     return [ doCountDown, secondsLeft ];
+}
+
+export function hasControl() {
+    return playerHasControl;
 }
 
 // Initialize the session parameters, name of the study, and list of functions that are used for the callbacks
@@ -259,17 +262,7 @@ function triggerSessionCallback( session , sessionId ) {
     }
 
     // Does this player have control?
-    hasControl = (session.playerControl == si.playerId);
-
-    if (session.playerControl !== playerControlBefore) {
-        if (!hasControl) {
-            //mpg.losesControl();
-        } else {
-            //mpg.gainedControl();
-        }
-        playerControlBefore = session.playerControl;
-    }
-
+    playerHasControl = (session.playerControl == si.playerId);
 }
 
 
