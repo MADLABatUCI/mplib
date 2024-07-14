@@ -3,14 +3,14 @@
    ----------------------------------------------------------
 */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-auth.js"; // "./firebase/firebase-auth.js"; 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js"; // "./firebase/firebase-auth.js"; 
 import {
     getDatabase, ref, onValue, get, set, update, off,
     push, onChildAdded, onChildChanged,
     onChildRemoved, remove, serverTimestamp,
     query, orderByChild, equalTo, onDisconnect, runTransaction
-} from "https://www.gstatic.com/firebasejs/9.21.0/firebase-database.js"; //"./firebase/firebase-database.js";  //;
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js"; //"./firebase/firebase-database.js";  //;
 
 // si contains the session information that the client will see
 let si = {
