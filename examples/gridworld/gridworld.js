@@ -94,6 +94,9 @@ let playerElements = {};
 let coins = {};
 let coinElements = {};
 
+
+let hasEnded = false;
+
 // -------------------------------------
 //       Graphics handles
 // -------------------------------------
@@ -185,7 +188,7 @@ function getRandomSafeSpot() {
 function placeCoin() {
 
   let numCoins = Object.keys(coins).length;
-  if ( hasControl() && ( numCoins < maxCoins) ) {
+  if ( hasControl() && ( numCoins < maxCoins) && !hasEnded) {
       // This player can place coins
       const { x, y } = getRandomSafeSpot();
 
@@ -515,7 +518,7 @@ function startSession() {
   initGame();
 }
 
-function updateOngoingSession(sessionInfo) {
+function updateOngoingSession() {
   /*
       Functionality to invoke when updating an ongoing session.
 
@@ -523,7 +526,7 @@ function updateOngoingSession(sessionInfo) {
   */
 }
 
-function endSession(sessionInfo) {
+function endSession() {
   /*
       Functionality to invoke when ending a session.
 
@@ -546,6 +549,9 @@ function endSession(sessionInfo) {
   arrowDownListener.unbind();
   arrowLeftListener.unbind();
   arrowRightListener.unbind();
+
+  // Set a flag
+  hasEnded = true;
 
   let err = getSessionError();
 
