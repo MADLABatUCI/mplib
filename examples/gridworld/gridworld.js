@@ -103,11 +103,7 @@ let players = {};
 let playerElements = {};
 let coins = {};
 let coinElements = {};
-
-
 let hasEnded = false;
-
-
 
 
 // -------------------------------------

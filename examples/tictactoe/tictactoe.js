@@ -78,12 +78,6 @@ let gameState;
 let emptyPlace = ' '; // this character represents the absence of a token and a lack of a winner (it is tempting to use "null" for this state, but firebase does not store any null variables and this can complicate the coding)
 let delayStartNewGame = 3000;
 
-
-
-// Set up correct instructions
-instructionsText.innerHTML = `<p>This game demonstrates how to use the MPLIB library for the two-player turn-taking game of tic-tac-toe. Use the mouse
-to place your tokens on the board.</p><p>Open up this link at two different browser tabs (or two different browsers) to simulate the two players</p>`;
-
 // -------------------------------------
 //       Event Listeners
 // -------------------------------------
@@ -115,6 +109,9 @@ cells.forEach(cell => {
 // -------------------------------------
 //      Game logic and UI
 // -------------------------------------
+// Set up correct instructions
+instructionsText.innerHTML = `<p>This game demonstrates how to use the MPLIB library for the two-player turn-taking game of tic-tac-toe. Use the mouse
+to place your tokens on the board.</p><p>Open up this link at two different browser tabs (or two different browsers) to simulate the two players</p>`;
 
 function newGame() {
     // Initialize a game

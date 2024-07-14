@@ -1,0 +1,26 @@
+{
+    "rules": {
+       "$studyId": {
+          "recordedData": {
+             // Allow any authenticated user to write but not read data logs 
+             ".write": true,
+             ".read": false
+          },
+          "states": {
+             // Allow any authenticated user to read and write gameState data 
+             ".write": true,
+             ".read": true
+          },
+          "sessions": {
+             // Allow any authenticated user to read and write session status data 
+             ".write": true,
+             ".read": true
+          },
+          "presence": {
+             // Allow any authenticated user to read and write presence status updates 
+             ".write": true,
+             ".read": true
+          }
+       }
+    }
+ }

@@ -106,7 +106,7 @@ export function hasControl() {
 
 export function isBrowserCompatible() {
     let isok = true;
-    if (isEdgeBrowser) isok = false;
+    //if (isEdgeBrowser) isok = false;
     return isok;
 }
 
@@ -124,7 +124,7 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, listen
     callback_evaluateUpdate = funList.evaluateUpdateFunction;
     callback_removePlayerState = funList.removePlayerStateFunction;
 
-    if (isEdgeBrowser()) {
+    if (!isBrowserCompatible()) {
         si.sessionErrorCode = 3;
         si.sessionErrorMsg = 'Browser incompatibility';
         si.status = 'endSession';
