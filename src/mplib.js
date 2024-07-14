@@ -4,17 +4,16 @@
 */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js"; // "./firebase/firebase-auth.js"; 
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js"; // "./firebase/firebase-auth.js"; 
 import {
     getDatabase, ref, onValue, get, set, update, off,
     push, onChildAdded, onChildChanged,
-    onChildRemoved, remove, serverTimestamp,
-    query, orderByChild, equalTo, onDisconnect, runTransaction
+    onChildRemoved, remove, serverTimestamp, onDisconnect, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js"; //"./firebase/firebase-database.js";  //;
 
 // si contains the session information that the client will see
 let si = {
-    playerId: generateId(), // Create a random id for the player; this id is across browser windows on the same client 
+    playerId: generateId(), // Create a random id for the player; this id is different across browser windows on the same client 
 };
 //initSessionInfo();
 
@@ -423,6 +422,24 @@ window.addEventListener('blur', function () {
         sessionUpdate('blur', si.playerId);
     }
 });
+
+// Experimental feature: 
+// reading the state at a given path
+export async function readState(path) {
+    const dbRef = ref(db, `${studyId}/states/${si.sessionId}/${path}`);
+    try {
+        const snapshot = await get(dbRef);
+        if (snapshot.exists()) {
+            return snapshot.val();
+        } else {
+            myconsolelog("No data available");
+            return null;
+        }
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+}
 
 // This function allows for direct changes to a gamestate without checking for conflicts
 // Use these updates to speed up games with continuous movements where players' movements do
