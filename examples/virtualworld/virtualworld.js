@@ -15,9 +15,24 @@ import {
     updateStateTransaction,  
     hasControl,
     getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
-    getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
+    getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo,
+    isBrowserCompatible
 } from "/mplib/src/mplib.js";
 
+// -------------------------------------
+//       Graphics handles
+// -------------------------------------
+let instructionsScreen = document.getElementById('instructionsScreen');
+let waitingRoomScreen = document.getElementById('waitingRoomScreen');
+let gameScreen = document.getElementById('gameScreen');
+let messageWaitingRoom = document.getElementById('messageWaitingRoom');
+let messageGame = document.getElementById('messageGame');
+let messageFinish = document.getElementById('messageFinish');
+let info = document.getElementById('info');
+let cameraEl = document.querySelector('#camera');
+let characterNameEl = document.querySelector('#characterName');
+let characterTextBackgroundEl = document.querySelector('#characterTextBackground');
+let scene = document.querySelector('a-scene');
 
 // -------------------------------------
 //       Session configuration
@@ -84,29 +99,14 @@ let climits = {
 //let previousPosition = new AFRAME.THREE.Vector3();
 //let previousRotation = new AFRAME.THREE.Euler();
 
-// -------------------------------------
-//       Graphics handles
-// -------------------------------------
-let instructionsScreen = document.getElementById('instructionsScreen');
-let waitingRoomScreen = document.getElementById('waitingRoomScreen');
-let gameScreen = document.getElementById('gameScreen');
-let messageWaitingRoom = document.getElementById('messageWaitingRoom');
-let messageGame = document.getElementById('messageGame');
-let messageFinish = document.getElementById('messageFinish');
-let info = document.getElementById('info');
 
-let cameraEl = document.querySelector('#camera');
-let characterNameEl = document.querySelector('#characterName');
-let characterTextBackgroundEl = document.querySelector('#characterTextBackground');
-
-let scene = document.querySelector('a-scene');
-
-
-if (scene.hasLoaded) {
-    showInstructions();
-  } else {
-    scene.addEventListener('loaded', showInstructions);
-  }
+if (isBrowserCompatible()) {
+    if (scene.hasLoaded) {
+        showInstructions();
+    } else {
+        scene.addEventListener('loaded', showInstructions);
+    }
+}
 
 // -------------------------------------
 //       Event Listeners
@@ -542,6 +542,9 @@ function endSession(sessionInfo) {
     } else if (err.errorCode==2) {
         // This client was disconnected (e.g. internet connectivity issues) 
         messageFinish.innerHTML = `<p>Session ended abnormally because you are experiencing internet connectivity issues</p>`;
+    } else if (err.errorCode==3) {
+        // This client is using an incompatible browser
+        messageFinish.innerHTML = `<p>Session ended abnormally because you are using the Edge browser which is incompatible with this experiment. Please use Chrome or Firefox</p>`;
     } else {
         messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }

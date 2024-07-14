@@ -20,6 +20,16 @@ import {
     getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
+// -------------------------------------
+//       Graphics handles
+// -------------------------------------
+let instructionsScreen = document.getElementById('instructionsScreen');
+let waitingRoomScreen = document.getElementById('waitingRoomScreen');
+let gameScreen = document.getElementById('gameScreen');
+let messageWaitingRoom = document.getElementById('messageWaitingRoom');
+let messageGame = document.getElementById('messageGame');
+let messageFinish = document.getElementById('messageFinish');
+
 
 // -------------------------------------
 //       Session configuration
@@ -68,15 +78,7 @@ initializeMPLIB( sessionConfig , studyId , funList, listenerPaths, verbosity );
 // -------------------------------------
 
 
-// -------------------------------------
-//       Graphics handles
-// -------------------------------------
-let instructionsScreen = document.getElementById('instructionsScreen');
-let waitingRoomScreen = document.getElementById('waitingRoomScreen');
-let gameScreen = document.getElementById('gameScreen');
-let messageWaitingRoom = document.getElementById('messageWaitingRoom');
-let messageGame = document.getElementById('messageGame');
-let messageFinish = document.getElementById('messageFinish');
+
 
 // -------------------------------------
 //       Event Listeners
@@ -309,6 +311,9 @@ function endSession() {
     } else if (err.errorCode==2) {
         // This client was disconnected (e.g. internet connectivity issues) 
         messageFinish.innerHTML = `<p>Session ended abnormally because you are experiencing internet connectivity issues</p>`;
+    } else if (err.errorCode==3) {
+        // This client is using an incompatible browser
+        messageFinish.innerHTML = `<p>Session ended abnormally because you are using the Edge browser which is incompatible with this experiment. Please use Chrome or Firefox</p>`;
     } else {
         messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }

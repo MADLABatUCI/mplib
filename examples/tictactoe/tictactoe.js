@@ -18,6 +18,18 @@ import {
     getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
+// -------------------------------------
+//       Graphics handles
+// -------------------------------------
+let instructionsScreen = document.getElementById('instructionsScreen');
+let waitingRoomScreen = document.getElementById('waitingRoomScreen');
+let gameScreen = document.getElementById('gameScreen');
+let messageWaitingRoom = document.getElementById('messageWaitingRoom');
+let messageGame = document.getElementById('messageGame');
+let messageFinish = document.getElementById('messageFinish');
+const cells = document.querySelectorAll('.cell');
+let instructionsText = document.getElementById('instructionText');
+let turnText = document.getElementById('turnMessage');
 
 // -------------------------------------
 //       Game configuration
@@ -66,18 +78,7 @@ let gameState;
 let emptyPlace = ' '; // this character represents the absence of a token and a lack of a winner (it is tempting to use "null" for this state, but firebase does not store any null variables and this can complicate the coding)
 let delayStartNewGame = 3000;
 
-// -------------------------------------
-//       Graphics handles
-// -------------------------------------
-let instructionsScreen = document.getElementById('instructionsScreen');
-let waitingRoomScreen = document.getElementById('waitingRoomScreen');
-let gameScreen = document.getElementById('gameScreen');
-let messageWaitingRoom = document.getElementById('messageWaitingRoom');
-let messageGame = document.getElementById('messageGame');
-let messageFinish = document.getElementById('messageFinish');
-const cells = document.querySelectorAll('.cell');
-let instructionsText = document.getElementById('instructionText');
-let turnText = document.getElementById('turnMessage');
+
 
 // Set up correct instructions
 instructionsText.innerHTML = `<p>This game demonstrates how to use the MPLIB library for the two-player turn-taking game of tic-tac-toe. Use the mouse
@@ -392,6 +393,9 @@ function endSession() {
     } else if (err.errorCode==2) {
         // This client was disconnected (e.g. internet connectivity issues) 
         messageFinish.innerHTML = `<p>Session ended abnormally because you are experiencing internet connectivity issues</p>`;
+    } else if (err.errorCode==3) {
+        // This client is using an incompatible browser
+        messageFinish.innerHTML = `<p>Session ended abnormally because you are using the Edge browser which is incompatible with this experiment. Please use Chrome or Firefox</p>`;
     } else {
         messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }

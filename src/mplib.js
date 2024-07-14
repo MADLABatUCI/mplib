@@ -80,9 +80,13 @@ export function getSessionId() {
 }
 
 export function anyPlayerTerminatedAbnormally() {
-    let players = si.allPlayersEver; 
-    const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
-    return hasAbnormalStatus;
+    if (si.allPlayersEver) {
+        let players = si.allPlayersEver; 
+        const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
+        return hasAbnormalStatus;
+    } else {
+        return false;
+    }
 }
 
 export function getSessionError() {
@@ -100,8 +104,16 @@ export function hasControl() {
     return playerHasControl;
 }
 
+export function isBrowserCompatible() {
+    let isok = true;
+    if (isEdgeBrowser) isok = false;
+    return isok;
+}
+
 // Initialize the session parameters, name of the study, and list of functions that are used for the callbacks
 export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, listenerPathsNow, verbosityNow ) {
+    
+
     sessionConfig = sessionConfigNow; // session parameters
     studyId = studyIdNow; // name of the study that is used as the root node in firebase
     verbosity = verbosityNow; // verbosity = 0: no messages to console; 1: write messages to the console 
@@ -112,18 +124,27 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, listen
     callback_evaluateUpdate = funList.evaluateUpdateFunction;
     callback_removePlayerState = funList.removePlayerStateFunction;
 
-    // 
-    listenerPaths = [...listenerPathsNow ]; // create a copy of the array
-    if (!listenerPaths) {
-        listenerPaths = [ '' ];
+    if (isEdgeBrowser()) {
+        si.sessionErrorCode = 3;
+        si.sessionErrorMsg = 'Browser incompatibility';
+        si.status = 'endSession';
+        callback_sessionChange.endSession();
+    } else {
+        // 
+        listenerPaths = [...listenerPathsNow ]; // create a copy of the array
+        if (!listenerPaths) {
+            listenerPaths = [ '' ];
+        }
+
+        // Reset the session info information
+        startTime = new Date(); // record the time at which the library was started (typically start of reading instructions)
+        initSessionInfo();
+        myconsolelog("Player id=" + si.playerId);
+
+        initializeFirebaseListeners();
     }
 
-    // Reset the session info information
-    startTime = new Date(); // record the time at which the library was started (typically start of reading instructions)
-    initSessionInfo();
-    myconsolelog("Player id=" + si.playerId);
-
-    initializeFirebaseListeners();
+    
 }
 
 function initializeFirebaseListeners() {
@@ -272,10 +293,14 @@ function triggerSessionCallback( session , sessionId ) {
 }
 
 
+
+
+
 // Function for player wanting to join a session
 export function joinSession() {
     sessionUpdate('join', si.playerId).then(result => {
-        if (!result.isSuccess) {
+        if (!result.isSuccess) { 
+        //if (!result) {
             // Trigger function when session (active or waiting-room) could not be started
             si.sessionErrorCode = 1;
             si.sessionErrorMsg = 'Unable to join session';
@@ -303,6 +328,7 @@ export function joinSession() {
             });
         }
     });
+    
 }
 
 // Function for player leaving a session
@@ -972,3 +998,7 @@ function myconsolelog(message) {
     }
 }
 
+function isEdgeBrowser() {
+    const userAgent = window.navigator.userAgent;
+    return /Edge\/\d+|Edg\/\d+/.test(userAgent);
+}
