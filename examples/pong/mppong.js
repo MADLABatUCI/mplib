@@ -50,8 +50,11 @@ let funList = {
     removePlayerStateFunction: removePlayerState
 };
 
-// Set the session configuration for MPLIB
-initializeMPLIB( sessionConfig , studyId , funList, verbosity );
+// List the node names where we place listeners for any changes to the children of these nodes; set to '' if listening to changes for children of the root
+let listenerPaths = [ '' ];
+
+// Set the session parameters and callback functions for MPLIB
+initializeMPLIB( sessionConfig , studyId , funList, listenerPaths, verbosity );
 
 // -------------------------------------
 //       Globals
@@ -524,7 +527,7 @@ function createAnimation(x, y, color) {
 // 'onChildChanged'  This event is triggered any time a child node is modified. This includes any modifications to descendants of the child node. 
 // 'onChildAdded'    This event is triggered for each existing child and then every time a new child is added 
 // 'onChildRemoved'  This event is triggered when an immediate child is removed
-function receiveStateChange( nodeName, state, typeChange ) {
+function receiveStateChange( pathNow, nodeName, state, typeChange ) {
     //myconsolelog( 'typeChange = ' + typeChange );
     if (nodeName == 'p1') {    
         oldPlayer1X = player1X;

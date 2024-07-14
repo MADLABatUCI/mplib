@@ -53,8 +53,11 @@ let funList = {
     removePlayerStateFunction: removePlayerState
 };
 
-// Set the session configuration for MPLIB
-initializeMPLIB( sessionConfig , studyId , funList, verbosity );
+// List the node names where we place listeners for any changes to the children of these nodes; set to '' if listening to changes for children of the root
+let listenerPaths = [ 'players' ];
+
+// Set the session parameters and callback functions for MPLIB
+initializeMPLIB( sessionConfig , studyId , funList, listenerPaths, verbosity );
 
 // -------------------------------------
 //       Globals
@@ -126,13 +129,13 @@ leaveButton.addEventListener('click', function () {
 // --------------------------------------------------------------------------------------
 
 // Function to receive state changes from Firebase (broadcast by other players)
-function receiveStateChange(nodeName, newState, typeChange ) {
+function receiveStateChange(pathNow, nodeName, newState, typeChange ) {
     // typeChange can be the following:
     //  'onChildChanged'
     //  'onChildAdded'
     //  'onChildRemoved'
 
-    if (nodeName.startsWith("Player")) { // do we have a player change?
+    if (pathNow == 'players') { // do we have a player change?
         if (typeChange == 'onChildChanged') {
             if (nodeName != id) {
                 updateCharacter( nodeName, newState.position, newState.rotation, newState.direction );
@@ -160,7 +163,8 @@ function receiveStateChange(nodeName, newState, typeChange ) {
 function removePlayerState() {
     // Send a null state to this player in the database, which removes the database entry
     let newState = null;
-    updateStateDirect( id, newState);
+    let path = `players/${id}`;
+    updateStateDirect( path, newState);
 }
 
 // --------------------------------------------------------------------------------------
@@ -169,7 +173,7 @@ function removePlayerState() {
 
 
 function addSelf() {
-    id = `Player${ getCurrentPlayerArrivalIndex() }`;
+    id = `player${ getCurrentPlayerArrivalIndex() }`;
 
     let radius = 8;
     let angle = Math.random() * 2 * Math.PI;
@@ -189,7 +193,8 @@ function addSelf() {
 
     // Send this new player position to firebase
     let newState = { position, rotation, direction };
-    updateStateDirect( id, newState);
+    let path = `players/${id}`;
+    updateStateDirect( path, newState);
 } 
 
 
@@ -363,7 +368,8 @@ function moveCamera(direction) {
     // Send this new player position to firebase
     let newState = { position: { x:cameraPosition.x,y:cameraPosition.y,z:cameraPosition.z }, rotation: { x:cameraRotation.x,y:cameraRotation.y,z:cameraRotation.z },
                      direction };
-    updateStateDirect( id, newState);
+    let path = `players/${id}`;
+    updateStateDirect( path, newState);
 }
 
 function rotateCamera(direction) {
@@ -380,7 +386,8 @@ function rotateCamera(direction) {
     // Send this new player position to firebase
     let newState = { position: { x:cameraPosition.x,y:cameraPosition.y,z:cameraPosition.z }, rotation: { x:cameraRotation.x,y:cameraRotation.y,z:cameraRotation.z },
                      direction };
-    updateStateDirect( id, newState);
+    let path = `players/${id}`;
+    updateStateDirect( path, newState);
 }
 
 function setCamera( cameraPosition, cameraRotation ) {

@@ -56,8 +56,11 @@ let funList = {
     removePlayerStateFunction: removePlayerState
   };
 
+// List the node names where we place listeners for any changes to the children of these nodes; set to '' if listening to changes for children of the root
+let listenerPaths = [ '' ];
+
 // Set the session parameters and callback functions for MPLIB
-initializeMPLIB( sessionConfig , studyId , funList, verbosity );
+initializeMPLIB( sessionConfig , studyId , funList, listenerPaths, verbosity );
 
 
 // -------------------------------------
@@ -96,7 +99,7 @@ leaveButton.addEventListener('click', function () {
 // --------------------------------------------------------------------------------------
 
 // Function to receive state changes from Firebase (broadcast by other players)
-function receiveStateChange(nodeName, newState, typeChange ) {
+function receiveStateChange(pathNow, nodeName, newState, typeChange ) {
     // typeChange can be the following:
     //  'onChildChanged'
     //  'onChildAdded'

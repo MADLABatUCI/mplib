@@ -53,8 +53,11 @@ let funList = {
     removePlayerStateFunction: removePlayerState
 };
 
-// Set the session configuration for MPLIB
-initializeMPLIB( sessionConfig , studyId , funList, verbosity );
+// List the node names where we place listeners for any changes to the children of these nodes; set to '' if listening to changes for children of the root
+let listenerPaths = [ '' ];
+
+// Set the session parameters and callback functions for MPLIB
+initializeMPLIB( sessionConfig , studyId , funList, listenerPaths, verbosity );
 
 // -------------------------------------
 //       Globals
@@ -207,7 +210,7 @@ function checkWinner( board ) {
 //   (note: all timestamps are server-side expressed in milliseconds since the Unix Epoch)
 // --------------------------------------------------------------------------------------
 // Function to receive state changes from Firebase
-function receiveStateChange(nodeName, newState, typeChange ) {
+function receiveStateChange(pathNow,nodeName, newState, typeChange ) {
     if (nodeName === 'state') {
         gameState = newState;
         updateUI();

@@ -21,7 +21,7 @@ let playerHasControl;
 let sessionConfig;
 let studyId;
 let verbosity;
-let stateRef;
+let stateRef = [];
 let presenceRef, connectedRef, otherPresenceRef;
 let sessionsRef, recordEventsRef;
 let offsetRef;
@@ -31,6 +31,7 @@ let focusStatus = 'focus';
 let playerControlBefore = '';
 let intervalId; // interval timer for the waiting room countdown;
 let startTime;
+let listenerPaths;
 
 let callback_sessionChange;
 let callback_receiveStateChange;
@@ -100,7 +101,7 @@ export function hasControl() {
 }
 
 // Initialize the session parameters, name of the study, and list of functions that are used for the callbacks
-export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbosityNow ) {
+export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, listenerPathsNow, verbosityNow ) {
     sessionConfig = sessionConfigNow; // session parameters
     studyId = studyIdNow; // name of the study that is used as the root node in firebase
     verbosity = verbosityNow; // verbosity = 0: no messages to console; 1: write messages to the console 
@@ -110,6 +111,12 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, verbos
     callback_receiveStateChange = funList.receiveStateChangeFunction;
     callback_evaluateUpdate = funList.evaluateUpdateFunction;
     callback_removePlayerState = funList.removePlayerStateFunction;
+
+    // 
+    listenerPaths = [...listenerPathsNow ]; // create a copy of the array
+    if (!listenerPaths) {
+        listenerPaths = [ '' ];
+    }
 
     // Reset the session info information
     startTime = new Date(); // record the time at which the library was started (typically start of reading instructions)
@@ -321,10 +328,12 @@ export async function leaveSession() {
         off(otherPresenceRef);
 
         // remove the listener for game state
-        off(stateRef);
-        if (result.sessionsState===null) {
-            // the state can be removed as there are no more players left in this session
-            remove(stateRef);
+        for (let i=0; i<listenerPaths.length; i++) {
+            off(stateRef[i]);
+            if (result.sessionsState===null) {
+                // the state can be removed as there are no more players left in this session
+                remove(stateRef[i]);
+            }
         }
 
         // remove the listener for session changes
@@ -339,45 +348,51 @@ export async function leaveSession() {
 
 // Function to start an active session (e.g. coming out of a waiting room, or when a single player can start a session)
 function startSession() {
-    // Create a path to store the game state
-    stateRef = ref(db, `${studyId}/states/${si.sessionId}/`);
-
+    
     // Create a path to store all recorded events related to state changes 
     recordEventsRef = ref(db, `${studyId}/recordedData/${si.sessionId}/events/`);
 
+    for (let i=0; i<listenerPaths.length; i++) {
+        // What is the root node for this set of listeners? 
+        let pathNow = listenerPaths[ i ];
+
+        // Create a path to store the game state
+        stateRef[ i ]= ref(db, `${studyId}/states/${si.sessionId}/${pathNow}`);
+
+        // Create a listener for changes in the state 
+        onChildChanged(stateRef[ i ], (snapshot) => {
+            const nodeName = snapshot.key;
+            const state = snapshot.val();
+            if (state != null) {
+                // execute this function in the client game code 
+                callback_receiveStateChange(pathNow,nodeName, state, 'onChildChanged');
+            }
+        });
+
+
+        // Create a listener for additions to the state
+        onChildAdded(stateRef[ i ], (snapshot) => {
+            const nodeName = snapshot.key;
+            const state = snapshot.val();
+            if (state != null) {
+                // execute this function in the client game code 
+                callback_receiveStateChange(pathNow,nodeName, state, 'onChildAdded');
+            }
+        });
+
+        // Create a listener for additions to the state
+        onChildRemoved(stateRef[ i ], (snapshot) => {
+            const nodeName = snapshot.key;
+            const state = snapshot.val();
+            if (state != null) {
+                // execute this function in the client game code 
+                callback_receiveStateChange(pathNow,nodeName, state, 'onChildRemoved');
+            }
+        });
+
+        //console.log(entry);
+    };
     
-
-    // Create a listener for changes in the state 
-    onChildChanged(stateRef, (snapshot) => {
-        const nodeName = snapshot.key;
-        const state = snapshot.val();
-        if (state != null) {
-            // execute this function in the client game code 
-            callback_receiveStateChange(nodeName, state, 'onChildChanged');
-        }
-    });
-
-
-    // Create a listener for additions to the state
-    onChildAdded(stateRef, (snapshot) => {
-        const nodeName = snapshot.key;
-        const state = snapshot.val();
-        if (state != null) {
-            // execute this function in the client game code 
-            callback_receiveStateChange(nodeName, state, 'onChildAdded');
-        }
-    });
-
-    // Create a listener for additions to the state
-    onChildRemoved(stateRef, (snapshot) => {
-        const nodeName = snapshot.key;
-        const state = snapshot.val();
-        if (state != null) {
-            // execute this function in the client game code 
-            callback_receiveStateChange(nodeName, state, 'onChildRemoved');
-        }
-    });
-
     // Invoke function at client
     callback_sessionChange.startSession();
 }
