@@ -39,7 +39,13 @@ updateConfigFromUrl( sessionConfig );
 
 // List names of the callback functions that are used in this code (so MPLIB knows which functions to trigger)
 let funList = { 
-    sessionChangeFunction: sessionChange,
+    sessionChangeFunction: {
+        joinedWaitingRoom: joinWaitingRoom,
+        updateWaitingRoom: updateWaitingRoom,
+        startSession: startSession,
+        updateOngoingSession: updateOngoingSession,
+        endSession: endSession
+    },
     receiveStateChangeFunction: receiveStateChange,
     evaluateUpdateFunction: evaluateUpdate,
     removePlayerStateFunction: removePlayerState
@@ -51,7 +57,9 @@ initializeMPLIB( sessionConfig , studyId , funList, verbosity );
 // -------------------------------------
 //       Globals
 // -------------------------------------
-let playerN;
+let playerUniqueID;
+let playerIDsAll;
+let playerNumber;
 let gameState;
 let thisSession;
 let playerNEstimate = -1; // save a players no guess as -1, once a player has submitted a guess (> 0) then do something about it
@@ -134,7 +142,7 @@ submitGuess.addEventListener('click', function () {
         messageToPlayer.innerText = 'estimate received...waiting for other estimates'
         //  Update the database to now include the client's estimate
         updateStateDirect(
-            'state/player' + playerN,
+            'state/player' + playerNumber,
             {
                 estimate: Number(playerNEstimate)
             }
@@ -183,7 +191,7 @@ function _ensureOtherPlayerEstimateIsValid(n) {
     */
 
     console.log("Game State", gameState);
-    // Get the estimate of playerN
+    // Get the estimate of playerNumber
     let playerEstimate = gameState['player' + n].estimate;
 
     console.log("Player " + n + " Estimate", playerEstimate);
@@ -224,10 +232,10 @@ function _updatePlayerEstimateView(n) {
     let playerEstimate = gameState['player' + n].estimate;
 
     // Get the estimate element
-    if (playerN === 1) {
+    if (playerNumber === 1) {
         playerToUpdate = n;
     } else {
-        let thisMapping = playerMapppings['player' + playerN];
+        let thisMapping = playerMapppings['player' + playerNumber];
         console.log(thisMapping);
         playerToUpdate = thisMapping[n];
         console.log(playerToUpdate);
@@ -268,9 +276,11 @@ function newGame() {
         newState = {
             numberOfObjects: 100,
             player1: {
+                pid: playerUniqueID,
                 estimate: playerNEstimate,
             },
             player2: {
+                pid: playerUniqueID,
                 estimate: playerNEstimate,
             },
             //currentPlayer: whoStarts, // who is starting this turn?
@@ -284,9 +294,11 @@ function newGame() {
         newState = {
             numberOfObjects: 100,
             player1: {
+                pid: playerUniqueID,
                 estimate: playerNEstimate,
             },
             player2: {
+                pid: playerUniqueID,
                 estimate: playerNEstimate,
             },
             //currentPlayer: whoStarts, // who is starting this turn?
@@ -323,7 +335,7 @@ function updateUI() {
     */
     for (let i = 1; i <= 5; i++) {
         console.log("updating ", i);
-        if (i === playerN) {
+        if (i === playerNumber) {
             console.log("this is the current player number", i);
         } else {
             //  Ensure that the estimate value is valid
@@ -434,13 +446,15 @@ function removePlayerState( playerId ) {
 //   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
-function sessionChange(sessionInfo, typeChange) {
-    // typeChange can be the following
-    // 'joinedWaitingRoom'
-    // 'updateWaitingRoom'
-    // 'startSession'
-    // 'updateOngoingSession'
-    // 'endSession'
+function joinWaitingRoom(sessionInfo) {
+    /*
+        Functionality to invoke when joining a waiting room.
+
+        This function does the following:
+            - Determines the number of players needed for the game
+            - Creates an appropriate message based on players needed and players in waiting room
+            - Displays the waiting room screen
+    */
     thisSession = sessionInfo;
 
     let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
@@ -448,105 +462,55 @@ function sessionChange(sessionInfo, typeChange) {
     let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
     messageWaitingRoom.innerText = str2;
 
-    if (typeChange === 'joinedWaitingRoom') {
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'block';
-    
-        let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-        let numPlayers = sessionInfo.numPlayers;
-        let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
-    
-        messageWaitingRoom.innerText = str2;
-        thisSession = sessionInfo;
-    }
-
-    if (typeChange === 'updateWaitingRoom') {
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'block';
-        let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-        let numPlayers = sessionInfo.numPlayers;
-        let str2;
-        if (sessionInfo.status == 'waitingRoomCountdown') {
-            str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
-        }  else {       
-            str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
-        } 
-        messageWaitingRoom.innerText = str2;
-        thisSession = sessionInfo;
-    }
-
-    if (typeChange === 'startSession') {
-        playerN = sessionInfo.arrivalIndex;
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'none';
-        gameScreen.style.display = 'block';
-        
-        let dateString = timeStr(sessionInfo.sessionStartedAt);
-        let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
-        myconsolelog( str );
-        playerID.innerText = playerN;
-
-        let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-        //messageGame.innerHTML = str2;
-
-        thisSession = sessionInfo;
-        newGame();
-    }
-
-    if (typeChange === 'updateOngoingSession') {
-
-    }
-
-    if (typeChange === 'endSession') {
-        instructionsScreen.style.display = 'none';
-        waitingRoomScreen.style.display = 'none';
-        gameScreen.style.display = 'none';
-        finishScreen.style.display = 'block';
-
-        if (sessionInfo.sessionErrorCode != 0) {
-            messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
-        } else {
-            messageFinish.innerHTML = `<p>You have completed the session.</p>`;
-        }
-        thisSession = sessionInfo;
-    }
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'block';
 }
 
+function updateWaitingRoom(sessionInfo) {
+    /*
+        Functionality to invoke when updating the waiting room.
 
-// This callback function is triggered when a waiting room starts
-/*export function joinedWaitingRoom(sessionInfo) {
+        This function does the following:
+            - Displays the waiting room screen
+            - Checks the status of the current session
+                - If the status is 'waitingRoomCountdown' then the game will start
+                - otherwise continue waiting
+            - Displays a 'game will start' message if appropriate
+    */
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
 
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let numPlayers = sessionInfo.numPlayers;
-    let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
-
-    messageWaitingRoom.innerText = str2;
-    thisSession = sessionInfo;
-}
-
-// This callback function is triggered when waiting room is still ongoing, but number of players waiting changes
-export function updateWaitingRoom(sessionInfo) {
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'block';
     let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
     let numPlayers = sessionInfo.numPlayers;
     let str2;
+
     if (sessionInfo.status == 'waitingRoomCountdown') {
         str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
     }  else {       
         str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
-    } 
+    }
+
     messageWaitingRoom.innerText = str2;
     thisSession = sessionInfo;
 }
 
-// This callback function is triggered when the session starts (when enough players have gathered, or when only a single player is needed)
-export function startSession(sessionInfo) {
+function startSession(sessionInfo) {
+    /*
+        Funtionality to invoke when starting a session.
+
+        This function does the following:
+            - Displays the game screen
+            - Logs the start of the game with the session ID and timestamp
+            - Displays a "game started" message
+            - Starts a new game
+    */
     // Assign playerUniqueID
     // sessinoInfo.playerID
-    playerN = sessionInfo.arrivalIndex;
+    playerUniqueID = sessionInfo.playerId;
+    playerIDsAll = sessionInfo.playerIds;
+    console.log("all player IDs", playerIDsAll);
+    playerNumber = sessionInfo.arrivalIndex;
+
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
@@ -554,9 +518,9 @@ export function startSession(sessionInfo) {
     let dateString = timeStr(sessionInfo.sessionStartedAt);
     let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
     myconsolelog( str );
-    playerID.innerText = playerN;
 
-    let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
+    playerID.innerText = playerNumber;
+    //let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
     //messageGame.innerHTML = str2;
 
     thisSession = sessionInfo;
@@ -564,7 +528,7 @@ export function startSession(sessionInfo) {
 }
 
 // This callback function is triggered when session is active, but number of players changes
-export function updateSession(sessionInfo) {    
+function updateOngoingSession(sessionInfo) {    
     let dateString = timeStr(sessionInfo.sessionStartedAt);
     let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
     myconsolelog( str );
@@ -583,7 +547,7 @@ export function updateSession(sessionInfo) {
     }
 }
 
-export function endSession( sessionInfo ) {
+function endSession( sessionInfo ) {
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'none';
@@ -595,7 +559,7 @@ export function endSession( sessionInfo ) {
         messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }
     thisSession = sessionInfo;
-}*/
+}
 
 /*
 // This callback function is triggered when this client gains control over dynamic objects
