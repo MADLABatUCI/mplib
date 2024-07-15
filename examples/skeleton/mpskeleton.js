@@ -15,8 +15,20 @@ import {
     leaveSession,
     updateStateDirect,
     updateStateTransaction,  
-    hasControl
+    hasControl,
+    getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
+    getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
+
+// -------------------------------------
+//       Graphics handles
+// -------------------------------------
+let instructionsScreen = document.getElementById('instructionsScreen');
+let waitingRoomScreen = document.getElementById('waitingRoomScreen');
+let gameScreen = document.getElementById('gameScreen');
+let messageWaitingRoom = document.getElementById('messageWaitingRoom');
+let messageGame = document.getElementById('messageGame');
+let messageFinish = document.getElementById('messageFinish');
 
 
 // -------------------------------------
@@ -54,24 +66,19 @@ let funList = {
     removePlayerStateFunction: removePlayerState
   };
 
+// List the node names where we place listeners for any changes to the children of these nodes; set to '' if listening to changes for children of the root
+let listenerPaths = [ '' ];
+
 // Set the session parameters and callback functions for MPLIB
-initializeMPLIB( sessionConfig , studyId , funList, verbosity );
+initializeMPLIB( sessionConfig , studyId , funList, listenerPaths, verbosity );
 
 
 // -------------------------------------
 //       Globals
 // -------------------------------------
-let playerId;
 
-// -------------------------------------
-//       Graphics handles
-// -------------------------------------
-let instructionsScreen = document.getElementById('instructionsScreen');
-let waitingRoomScreen = document.getElementById('waitingRoomScreen');
-let gameScreen = document.getElementById('gameScreen');
-let messageWaitingRoom = document.getElementById('messageWaitingRoom');
-let messageGame = document.getElementById('messageGame');
-let messageFinish = document.getElementById('messageFinish');
+
+
 
 // -------------------------------------
 //       Event Listeners
@@ -94,7 +101,7 @@ leaveButton.addEventListener('click', function () {
 // --------------------------------------------------------------------------------------
 
 // Function to receive state changes from Firebase (broadcast by other players)
-function receiveStateChange(nodeName, newState, typeChange ) {
+function receiveStateChange(pathNow, nodeName, newState, typeChange ) {
     // typeChange can be the following:
     //  'onChildChanged'
     //  'onChildAdded'
@@ -116,7 +123,7 @@ function evaluateUpdate( path, state, action, actionArgs ) {
 }
 
 // Function triggered when this client closes the window and the player needs to be removed from the state 
-function removePlayerState( playerId ) {
+function removePlayerState() {
 
 }
 
@@ -124,7 +131,7 @@ function removePlayerState( playerId ) {
 //   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
-function joinWaitingRoom(sessionInfo) {
+function joinWaitingRoom() {
     /*
         Functionality to invoke when joining a waiting room.
 
@@ -134,9 +141,10 @@ function joinWaitingRoom(sessionInfo) {
             - Creates an appropriate message based on players needed and players in waiting room
             - Displays the waiting room screen
     */
-    playerId = sessionInfo.playerId; // the playerId for this client
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
-    let numPlayers = sessionInfo.numPlayers; // the current number of players
+
+    let playerId = getCurrentPlayerId(); // the playerId for this client
+    let numPlayers = getNumberCurrentPlayers(); // the current number of players
+    let numNeeded = sessionConfig.minPlayersNeeded - numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
     
     let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
     messageWaitingRoom.innerText = str2;
@@ -146,35 +154,37 @@ function joinWaitingRoom(sessionInfo) {
     waitingRoomScreen.style.display = 'block';
 }
 
-function updateWaitingRoom(sessionInfo) {
+function updateWaitingRoom() {
     /*
         Functionality to invoke when updating the waiting room.
 
         This function does the following:
             - Displays the waiting room screen
-            - Checks the status of the current session
-                - If the status is 'waitingRoomCountdown' then the game will start
+            - Checks the status of the waiting room through the getWaitRoomInfo() function
+                - If the flag doCountDown is true, then the game will start after a countdown
                 - otherwise continue waiting
             - Displays a 'game will start' message if appropriate
     */
+   
     // switch screens from instruction to waiting room
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
 
     // Waiting Room is full and we can start game
-    if (sessionInfo.status === 'waitingRoomCountdown') {
-        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
+    let [ doCountDown , secondsLeft ] = getWaitRoomInfo();
+    if (doCountDown) {
+        let str2 = `Game will start in ${ secondsLeft } seconds...`;
         messageWaitingRoom.innerText = str2;
     } else { // Still waiting for more players, update wait count
-        let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
-        let numPlayers = sessionInfo.numPlayers; // the current number of players
+        let numPlayers = getNumberCurrentPlayers(); // the current number of players
+        let numNeeded = sessionConfig.minPlayersNeeded - numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
         
         let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
         messageWaitingRoom.innerText = str2;
     }
 }
 
-function startSession(sessionInfo) {
+function startSession() {
     /*
         Funtionality to invoke when starting a session.
 
@@ -183,39 +193,42 @@ function startSession(sessionInfo) {
             - Logs the start of the game with the session ID and timestamp
             - Displays additional "game started" messages
     */
-    playerId = sessionInfo.playerId; // the playerId for this client
-    let numPlayers = sessionInfo.numPlayers; // the current number of players
+    let playerId = getCurrentPlayerId(); // the playerId for this client
+    let playerIds = getCurrentPlayerIds(); // the list of current players
+    let numPlayers = getNumberCurrentPlayers(); // the current number of players
             
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
 
-    let dateString = timeStr(sessionInfo.sessionStartedAt);
-    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
+    let dateString = timeStr( getPlayerInfo( playerId ).sessionStartedAt);
+    let str = `Started game with session id ${getSessionId()} with ${numPlayers} players at ${dateString}.`;
     myconsolelog( str );
 
-    let str2 = `<p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    str2 += `<p>Player ID: ${ sessionInfo.playerId}$</p>`;
+    let str2 = `<p>Session ID: ${getSessionId()}$</p>`;
+    str2 += `<p>Player ID: ${playerId}$</p>`;
 
-    str2 += `<p>Current number of players (${ sessionInfo.numPlayers} total):`;
+    str2 += `<p>Current number of players (${numPlayers} total):`;
     for (let i=0; i<numPlayers; i++) {
-        let playerNow = sessionInfo.playerIds[i];
-        str2 += `<br>Arrival #${sessionInfo.arrivalIndices[i]},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        let playerNow = playerIds[i];
+        let playerInfo = getPlayerInfo( playerNow );
+        str2 += `<br>Arrival #${playerInfo.arrivalIndex},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
     }
     str2 += `</p>`;
 
-    let allPlayersEver = Object.keys( sessionInfo.allPlayersEver );
-    let numPlayersEver = allPlayersEver.length;
+    let allPlayersEver = getAllPlayerIds();
+    let numPlayersEver = getNumberAllPlayers();
     str2 += `<p>History of players ever joined this session (${numPlayersEver} total):`;
     for (let i=0; i<numPlayersEver; i++) {
         let playerNow = allPlayersEver[i];
-        str2 += `<br>Arrival #${sessionInfo.allPlayersEver[playerNow].arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
-        str2 += ` Arrival time: ${timeStr(sessionInfo.allPlayersEver[playerNow].sessionStartedAt)}`;
-        if (sessionInfo.allPlayersEver[playerNow].leftGameAt != 0) {
-            str2 += ` Finish time: ${timeStr(sessionInfo.allPlayersEver[playerNow].leftGameAt)}`;
+        let playerInfo = getPlayerInfo( playerNow );
+        str2 += `<br>Arrival #${playerInfo.arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        str2 += ` Arrival time: ${timeStr(playerInfo.sessionStartedAt)}`;
+        if (playerInfo.leftGameAt != 0) {
+            str2 += ` Finish time: ${timeStr(playerInfo.leftGameAt)}`;
         }
-        if (sessionInfo.allPlayersEver[playerNow].finishStatus) {
-            str2 += ` Finish status: ${sessionInfo.allPlayersEver[playerNow].finishStatus}`;
+        if (playerInfo.finishStatus) {
+            str2 += ` Finish status: ${playerInfo.finishStatus}`;
         }
     }
     str2 += `</p>`;
@@ -223,43 +236,50 @@ function startSession(sessionInfo) {
     messageGame.innerHTML = str2;
 }
 
-function updateOngoingSession(sessionInfo) {
+function updateOngoingSession() {
     /*
         Functionality to invoke when updating an ongoing session.
 
         This function does the following:
             - Currently the same code as startSession
-                - Does not include the logging aspect of startSession
+            - Does not include the logging aspect of startSession
     */
-    playerId = sessionInfo.playerId; // the playerId for this client
-    let numPlayers = sessionInfo.numPlayers; // the current number of players
-                
+    let playerId = getCurrentPlayerId(); // the playerId for this client
+    let playerIds = getCurrentPlayerIds(); // the list of current players
+    let numPlayers = getNumberCurrentPlayers(); // the current number of players
+            
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
 
-    let str2 = `<p>Session ID: ${ sessionInfo.sessionId}$</p>`;
-    str2 += `<p>Player ID: ${ sessionInfo.playerId}$</p>`;
+    let dateString = timeStr( getPlayerInfo( playerId ).sessionStartedAt);
+    let str = `Started game with session id ${getSessionId()} with ${numPlayers} players at ${dateString}.`;
+    myconsolelog( str );
 
-    str2 += `<p>Current number of players (${ sessionInfo.numPlayers} total):`;
+    let str2 = `<p>Session ID: ${getSessionId()}$</p>`;
+    str2 += `<p>Player ID: ${playerId}$</p>`;
+
+    str2 += `<p>Current number of players (${numPlayers} total):`;
     for (let i=0; i<numPlayers; i++) {
-        let playerNow = sessionInfo.playerIds[i];
-        str2 += `<br>Arrival #${sessionInfo.arrivalIndices[i]},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        let playerNow = playerIds[i];
+        let playerInfo = getPlayerInfo( playerNow );
+        str2 += `<br>Arrival #${playerInfo.arrivalIndex},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
     }
     str2 += `</p>`;
 
-    let allPlayersEver = Object.keys( sessionInfo.allPlayersEver );
-    let numPlayersEver = allPlayersEver.length;
+    let allPlayersEver = getAllPlayerIds();
+    let numPlayersEver = getNumberAllPlayers();
     str2 += `<p>History of players ever joined this session (${numPlayersEver} total):`;
     for (let i=0; i<numPlayersEver; i++) {
         let playerNow = allPlayersEver[i];
-        str2 += `<br>Arrival #${sessionInfo.allPlayersEver[playerNow].arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
-        str2 += ` Arrival time: ${timeStr(sessionInfo.allPlayersEver[playerNow].sessionStartedAt)}`;
-        if (sessionInfo.allPlayersEver[playerNow].leftGameAt != 0) {
-            str2 += ` Finish time: ${timeStr(sessionInfo.allPlayersEver[playerNow].leftGameAt)}`;
+        let playerInfo = getPlayerInfo( playerNow );
+        str2 += `<br>Arrival #${playerInfo.arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        str2 += ` Arrival time: ${timeStr(playerInfo.sessionStartedAt)}`;
+        if (playerInfo.leftGameAt != 0) {
+            str2 += ` Finish time: ${timeStr(playerInfo.leftGameAt)}`;
         }
-        if (sessionInfo.allPlayersEver[playerNow].finishStatus) {
-            str2 += ` Finish status: ${sessionInfo.allPlayersEver[playerNow].finishStatus}`;
+        if (playerInfo.finishStatus) {
+            str2 += ` Finish status: ${playerInfo.finishStatus}`;
         }
     }
     str2 += `</p>`;
@@ -267,7 +287,7 @@ function updateOngoingSession(sessionInfo) {
     messageGame.innerHTML = str2;
 }
 
-function endSession(sessionInfo) {
+function endSession() {
     /*
         Functionality to invoke when ending a session.
 
@@ -283,29 +303,17 @@ function endSession(sessionInfo) {
     gameScreen.style.display = 'none';
     finishScreen.style.display = 'block';
 
-    // Check if any of the players (who ever played) terminated the session abnormally
-    let players = sessionInfo.allPlayersEver; 
-    const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
+    let err = getSessionError();
 
-    if (hasAbnormalStatus) {
-        // Add your own code below for handling case where another player closed their window or were disconnected prematurely
-        // Note that this is an issue with games that have a predefined number of players, but might not be an issue with experiments with
-        // a flexible number of players 
-        // ....
-    }
-
-    if (sessionInfo.sessionErrorCode != 0) {
-        messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
-        
-        if (sessionInfo.sessionErrorCode==1) {
-            // Add your own code below for handling case of no sessions being available 
-            // .... 
-        }
-
-        if (sessionInfo.sessionErrorCode==2) {
-            // Add your own code below for handling case of this client being disconnected (e.g. internet connectivity issues) 
-            // .... 
-        }
+    if (err.errorCode == 1) {
+        // No sessions available
+        messageFinish.innerHTML = `<p>Session ended abnormally because there are no available sessions to join</p>`;
+    } else if (err.errorCode==2) {
+        // This client was disconnected (e.g. internet connectivity issues) 
+        messageFinish.innerHTML = `<p>Session ended abnormally because you are experiencing internet connectivity issues</p>`;
+    } else if (err.errorCode==3) {
+        // This client is using an incompatible browser
+        messageFinish.innerHTML = `<p>Session ended abnormally because you are using the Edge browser which is incompatible with this experiment. Please use Chrome or Firefox</p>`;
     } else {
         messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }

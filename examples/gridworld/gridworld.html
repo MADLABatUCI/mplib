@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gridworld Game</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/mplib/examples/general.css">
+    <link rel="stylesheet" href="/mplib/examples/gridworld/gridworld.css" type="text/css">
+</head>
+
+<body>
+    <div class="container" id="instructionsScreen">
+        <h1>Instructions</h1>
+        <div class="containertext" id="instructionText">
+        <p> 
+        Use cursor keys to move your character and pick up as many tokens as you can</p>
+        </div>
+        <a href="#" class="button" id="joinBtn">Proceed</a> 
+    </div>
+    <div class="container" id="waitingRoomScreen"  style="display:none">
+        <h1>Waiting Room</h1>  
+        <div class="containertext" id="messageWaitingRoom"></div>
+    </div>
+    <div class="containertrans" id="gameScreen"  style="display:none;">
+        <h1 id="messageGame"></h1>
+        <a href="#" class="button2" id="leaveBtn">End Session</a>
+        <div class="game-container">
+          
+    </div>
+        
+        
+
+        <!--
+        <div class="player-info">
+          <div>
+            <label for="player-name">Your Name (change if needed)</label>
+            <input id="player-name" maxlength="10" type="text" />
+          </div>
+          <div>
+            <button id="player-color">Change Color</button>
+          </div>
+        </div>
+        -->
+    </div>
+    <div class="container" id="finishScreen"  style="display:none">
+        <h1>Completion</h1>  
+        <div class="containertext" id="messageFinish"></div>
+    </div>
+    
+    
+    <script src="/mplib/src/mpconfig.js"></script>
+    <script type="module" src="/mplib/src/mplib.js" async></script>
+    <script src="/mplib/examples/gridworld/KeyPressListener.js"></script>
+    <script type="module" src="/mplib/examples/gridworld/gridworld.js"></script>
+</body>
+
+</html>

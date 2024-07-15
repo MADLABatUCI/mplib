@@ -1,0 +1,23 @@
+These are the VERY BASIC rules I used in the video tutorial.
+
+You should be extra careful to expand on these to further lock down your project.
+
+For example, any logged in player could currently delete all the coins in the game - or write whatever they want to their individual `player` node.
+
+
+```
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": false,
+    "players": {
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+    "coins": {
+        ".write": "auth != null"
+    }
+  }
+}
+```
