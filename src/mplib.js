@@ -47,6 +47,32 @@ const db = getDatabase(firebaseApp);
 //------------------------------------------------------
 // Define some new functions we can use in other code
 //------------------------------------------------------
+// Takes the URL parameters to update the session configuration
+export function updateConfigFromUrl( sessionConfig ) {
+    const url = window.location.href;
+    const urlParams = new URL(url).searchParams;
+
+    for (let key in sessionConfig) {
+        if (urlParams.has(key)) {
+            const value = urlParams.get(key);
+
+            let newValue;
+            if (!isNaN(value)) {
+                newValue = Number(value);
+            }
+            else if (value === 'true' || value === 'false') {
+                newValue = (value === 'true');
+            }
+            // if not a number or boolean, treat it as a string
+            else {
+                newValue = value;              
+            }
+            sessionConfig[key] = newValue;
+            myconsolelog( `URL parameters update session parameter ${key} to value ${newValue}`);
+        }
+    }
+}
+
 export function getCurrentPlayerId() {
     return si.playerId;
 }
