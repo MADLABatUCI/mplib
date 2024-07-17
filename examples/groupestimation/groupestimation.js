@@ -1,43 +1,95 @@
-// --------------------------------------------------------------------------------------
-//    Demonstrate how MPLIB can be used to program a turn taking game
-// --------------------------------------------------------------------------------------
+/*
+groupestimation.js
+
+    |   Author          :   Helio Tejeda
+    |   Date            :   July 2024
+    |   Organization    :   MADLAB - University of California, Irvine
+
+ ---------------------------
+|   MPLib.js Game Example   |
+ ---------------------------
+Demonstrate how MPLib.js can be used to program a [insert game type] game.
+
+ ---------------------------
+|   Group Estimation Game   |
+ ---------------------------
+This is a group estimation game. Participants are given an image and need to
+estimate the number of objects in the image (as an example, estimating the
+number of objects in a jar).
+*/
 
 
-// -------------------------------------
-// Importing functions and variables from 
-// the Firebase MultiPlayer library
-// -------------------------------------
+/*
+    Imports from MPLib.js
+    ---------------------
+
+Import all necessary functionality from the library.
+*/
 import {
+    updateConfigFromUrl,
     initializeMPLIB,
     joinSession,
     leaveSession,
     updateStateDirect,
-    updateStateTransaction, 
-    hasControl
+    updateStateTransaction,
+    hasControl,
+    getCurrentPlayerId,
+    getCurrentPlayerIds,
+    getAllPlayerIds,
+    getPlayerInfo,
+    getNumberCurrentPlayers,
+    getNumberAllPlayers,
+    getCurrentPlayerArrivalIndex,
+    getSessionId,
+    anyPlayerTerminatedAbnormally,
+    getSessionError,
+    getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
-// -------------------------------------
-//       Game configuration
-// -------------------------------------
-// studyId is the name of the root node we create in the database
-const studyId = 'groupestimation'; 
-// Configuration setting for the session
+
+/*
+    Game Configuration
+    ------------------
+
+Configure all of the game settings. This includes:
+    - Game Variables
+    - Session Configuration
+    - Logging Verbosity
+    - Finalize Game Config with URL Params
+    - Create Function Callback Object
+    - Initialize Game Session with Library
+*/
+
+//  Conatant Game Variables
+let GameName = "groupestimation";
+let MinPlayers = 2;
+let MaxPlayers = 2;
+let MaxSessions = 0;
+let PlayerReplacement = false;
+let LeaveWaitingRoomTime = 3;
+let MinPlayerTimeout = 0;
+let MaxSessionTime = 0;
+let SaveData = false;
+
+//  Configuration Settings for the Session
+const studyId = GameName; 
 const sessionConfig = {
-    minPlayersNeeded: 2, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
-    maxPlayersNeeded: 2, // Maximum number of players allowed in a session
-    maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
-    allowReplacements: false, // Allow replacing any players who leave an ongoing session?
-    exitDelayWaitingRoom: 3, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
-    maxDurationBelowMinPlayersNeeded: 10, // Number of seconds to continue an active session even though there are fewer than the minimum number of players (if set to zero, session terminates immediately)
-    maxHoursSession: 0, // Maximum hours where additional players are still allowed to be added to session (if zero, there is no time limit)
-    recordData: false // Record all data?  
+    minPlayersNeeded: MinPlayers,
+    maxPlayersNeeded: MaxPlayers,
+    maxParallelSessions: MaxSessions,
+    allowReplacements: PlayerReplacement,
+    exitDelayWaitingRoom: LeaveWaitingRoomTime,
+    maxDurationBelowMinPlayersNeeded: MinPlayerTimeout,
+    maxHoursSession: MaxSessionTime,
+    recordData: SaveData
 };
 const verbosity = 2;
 
-// Allow URL parameters to update these default parameters
+//  Update Config Settings based on URL Parameters
 updateConfigFromUrl( sessionConfig );
 
-// List names of the callback functions that are used in this code (so MPLIB knows which functions to trigger)
+//  Create Function List
+//      An object with all necessary callback functions for gameplay
 let funList = { 
     sessionChangeFunction: {
         joinedWaitingRoom: joinWaitingRoom,
@@ -51,12 +103,24 @@ let funList = {
     removePlayerStateFunction: removePlayerState
 };
 
-// Set the session configuration for MPLIB
-initializeMPLIB( sessionConfig , studyId , funList, verbosity );
+// List the node names where we place listeners for any changes to the children of these nodes; set to '' if listening to changes for children of the root
+let listenerPaths = [ '' ];
 
-// -------------------------------------
-//       Globals
-// -------------------------------------
+//  Initialize the Game Session with all Configs
+initializeMPLIB( sessionConfig , studyId , funList, listenerPaths, verbosity );
+
+
+/*
+    Game Variables
+    --------------
+
+Initialize all game variables that will be used. This includes:
+    - Global Variables
+    - Graphic Handles
+    - Event Listeners
+*/
+
+//  Global Variables
 let playerUniqueID;
 let playerIDsAll;
 let playerNumber;
@@ -65,6 +129,55 @@ let thisSession;
 let playerNEstimate = -1; // save a players no guess as -1, once a player has submitted a guess (> 0) then do something about it
 let delayStartNewGame = 3000;
 let emptyPlace = ' '; // this character represents the absence of a token and a lack of a winner (it is tempting to use "null" for this state, but firebase does not store any null variables and this can complicate the coding)
+let trialNumber = 0;
+let NumberOfImages = 3;
+
+let images = {
+    image01 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_0JRIF5LHV_view5.png',
+        trueEstimate    : 554,
+    },
+    image02 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_7ILGNRK2D_view5.png',
+        trueEstimate    : 249,
+    },
+    image03 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_80NMDSOCB_view5.png',
+        trueEstimate    : 862,
+    },
+    image04 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_82DFOODCS_view5.png',
+        trueEstimate    : 295,
+    },
+    image05 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_KGONB1PPB_view5.png',
+        trueEstimate    : 527,
+    },
+    image06 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_KPET24YYP_view5.png',
+        trueEstimate    : 734,
+    },
+    image07 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_NIB1FRFXN_view5.png',
+        trueEstimate    : 388,
+    },
+    image08 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_QJ7A2VLZJ_view5.png',
+        trueEstimate    : 634,
+    },
+    image09 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_VL08RVUR5_view5.png',
+        trueEstimate    : 369,
+    },
+    image00 : {
+        path            : '/mplib/examples/groupestimation/images/Sphere2_VPVRI6MWB_view5.png',
+        trueEstimate    : 872,
+    },
+};
+
+let imageArray = Array.from({ length: 10 }, (v, k) => 'image0' + k * 1);
+let shuffledImageArray = imageArray.sort(function(){ return 0.5 - Math.random() });
+let selectedImages = shuffledImageArray.slice(0, NumberOfImages);
 
 let playerMapppings = {
     player2: {
@@ -107,6 +220,9 @@ let playerID = document.getElementById('playerID');
 let messageToPlayer = document.getElementById('messageToPlayer');
 let instructionsText = document.getElementById('instructionText');
 let turnText = document.getElementById('turnMessage');
+let imageContainer = document.getElementById('image-to-estimate');
+
+imageContainer.src = images[selectedImages[trialNumber]].path;
 
 // Set up correct instructions
 instructionsText.innerHTML = `<p>This game demonstrates how to use the MPLIB library for the two-player turn-taking game of tic-tac-toe. Use the mouse
@@ -595,30 +711,4 @@ function timeStr(timestamp) {
 
     let timeString = `${hours}:${minutes}:${seconds}`;
     return timeString;
-}
-
-// Takes the URL parameters to update the session configuration
-function updateConfigFromUrl( sessionConfig ) {
-    const url = window.location.href;
-    const urlParams = new URL(url).searchParams;
-
-    for (let key in sessionConfig) {
-        if (urlParams.has(key)) {
-            const value = urlParams.get(key);
-
-            let newValue;
-            if (!isNaN(value)) {
-                newValue = Number(value);
-            }
-            else if (value === 'true' || value === 'false') {
-                newValue = (value === 'true');
-            }
-            // if not a number or boolean, treat it as a string
-            else {
-                newValue = value;              
-            }
-            sessionConfig[key] = newValue;
-            myconsolelog( `URL parameters update session parameter ${key} to value ${newValue}`);
-        }
-    }
 }

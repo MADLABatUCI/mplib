@@ -310,16 +310,63 @@
                         - Add JS functionality to render balls into the jar
             -->
             <div class="row">
-                <div class="col-12">
-                    <div class="box">
+                <div class="col-12" id="image-container">
+                    <img id="image-to-estimate" style="border-radius: 50px; height: 350px"/>
+                    <!--<div class="box">
                         <div class="jar-bottom"></div>
                         <div class="jar-walls">
                             <div class="jar-glossy-long"></div>
                             <div class="jar-glossy-short"></div>
                         </div>
                         <div class="jar-top"></div>
+                    </div>-->
+                </div>
+                <!--<div class="col-2"></div>
+                <div class="col-4">
+                    <img src="images/Sphere2_0JRIF5LHV_view5.png" style="border-radius: 50px; height: 350px"/>
+                    <! --<div class="box">
+                        <div class="jar-bottom"></div>
+                        <div class="jar-walls">
+                            <div class="jar-glossy-long"></div>
+                            <div class="jar-glossy-short"></div>
+                        </div>
+                        <div class="jar-top"></div>
+                    </div>-- >
+                </div>
+                <div class="col-4" id="player1-container" style="border-right: 2px solid black;">
+                    <div class="row" id="player1-name-container" style="display: inline;">
+                        <div class="col-12">
+                            <div class="row">
+                                <div class="col-12" id="player1-name-content">
+                                    <h3 id="player1-name">You</h3>
+                                </div>
+                            </div>
+                            <div class="row" id="player1-avatar-container">
+                                <div class="col-12" id="player1-avatar-content">
+                                    <div class="person" id="player1">
+
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" id="player1-guess-container">
+                                <div class="col-12" id="player1-guess-content-input">
+                                    <input class="guess" id="player1-guess" type="number" value="" required>
+                                </div>
+                                <div class="col-12" id="player1-guess-content-text">
+                                    <h4 id="player1-guess-text"></h4>
+                                </div>
+                            </div>
+                            <div class="row" id="player1-submit-container">
+                                <div class="col-12" id="player1-submit-content">
+                                    <button type="button" class="btn btn-dark" id="estimation-button">
+                                        Submit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                <div class="col-2"></div>-->
             </div>
             <!--
                 Participants in Group Estimation game
@@ -327,6 +374,7 @@
                     By default the current user will be placed as the far left participant
 
             -->
+            <hr />
             <div class="row">
                 <div class="col-1"></div>
                 <!-- Current Player: This browser's player -->
@@ -362,7 +410,7 @@
                 <!-- Other Players: All other players -->
                 <div class="col-8" id="other-player-container">
                     <div class="row" id="other-player-content">
-                        <div class="col-3" id="player2-container">
+                        <div class="col-12" id="player2-container">
                             <div class="row" id="player2-name-container">
                                 <div class="col-12" id="player2-name-content">
                                     <h3 id="player2-name">Player 2</h3>
@@ -386,7 +434,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-3" id="player3-container">
+                        <!--<div class="col-3" id="player3-container">
                             <div class="row" id="player3-name-container">
                                 <div class="col-12" id="player3-name-content">
                                     <h3 id="player3-name">Player 3</h3>
@@ -457,7 +505,7 @@
                                     <h4 id="player5-guess-text"></h4>
                                 </div>
                             </div>
-                        </div>
+                        </div>-->
                     </div>
                 </div>
                 <div class="col-1"></div>
