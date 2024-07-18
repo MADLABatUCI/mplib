@@ -122,6 +122,38 @@ leaveButton.addEventListener('click', function () {
     leaveSession(); // call the library function to leave a session. This then triggers the local function endSession
 });
 
+class KeyPressListener {
+  constructor(keyCode, callback) {
+    this.keyCode = keyCode;
+    this.callback = callback;
+    this.keydownFunction = this.keydownFunction.bind(this);
+    this.keyupFunction = this.keyupFunction.bind(this);
+
+    document.addEventListener("keydown", this.keydownFunction);
+    document.addEventListener("keyup", this.keyupFunction);
+  }
+
+  keydownFunction(event) {
+    if (event.code === this.keyCode && activeKey === null) {
+      activeKey = this.keyCode;
+      this.callback();
+    }
+  }
+
+  keyupFunction(event) {
+    if (event.code === this.keyCode) {
+      activeKey = null;
+    }
+  }
+
+  unbind() {
+    document.removeEventListener("keydown", this.keydownFunction);
+    document.removeEventListener("keyup", this.keyupFunction);
+  }
+}
+
+let activeKey = null;
+  
 // Declare the key listeners and store them in variables
 let arrowUpListener = new KeyPressListener("ArrowUp", () => handleArrowPress(0, -1));
 let arrowDownListener = new KeyPressListener("ArrowDown", () => handleArrowPress(0, 1));
