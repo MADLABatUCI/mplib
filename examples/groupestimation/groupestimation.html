@@ -288,16 +288,16 @@
         </div>
         <a href="#" class="button" id="joinBtn">Proceed</a> 
     </div>
-    <div class="container" id="waitingRoomScreen"><!--style="display:none">-->
+    <div class="container" id="waitingRoomScreen" style="display:none">
         <h1>Waiting Room</h1>  
         <div class="containertext" id="messageWaitingRoom"></div>
     </div>
-    <div class="container" id="gameScreen" style="caret-color: transparent;"><!--display:none;">-->
+    <div class="container" id="gameScreen" style="caret-color: transparent; display:none;">
         <h1>Guess the number of objects (<span id="numPlayers">X</span> players)</h1>
         <div class="textturn" id="turnMessage">
             You are Player
             <span id="playerID"></span>:
-            <br />
+            <!--<br />-->
             <span id="messageToPlayer">make your guess</span>
         </div>
         <div id="game">
@@ -379,7 +379,7 @@
                 <div class="col-1"></div>
                 <!-- Current Player: This browser's player -->
                 <div class="col-2" id="player1-container" style="border-right: 2px solid black;">
-                    <div class="row" id="player1-name-container">
+                    <!--<div class="row" id="player1-name-container">
                         <div class="col-12" id="player1-name-content">
                             <h3 id="player1-name">You</h3>
                         </div>
@@ -405,12 +405,12 @@
                                 Submit
                             </button>
                         </div>
-                    </div>
+                    </div>-->
                 </div>
                 <!-- Other Players: All other players -->
                 <div class="col-8" id="other-player-container">
                     <div class="row" id="other-player-content">
-                        <div class="col-12" id="player2-container">
+                        <!--<div class="col-12" id="player2-container">
                             <div class="row" id="player2-name-container">
                                 <div class="col-12" id="player2-name-content">
                                     <h3 id="player2-name">Player 2</h3>
@@ -433,7 +433,7 @@
                                     <h4 id="player2-guess-text"> </h4>
                                 </div>
                             </div>
-                        </div>
+                        </div>-->
                         <!--<div class="col-3" id="player3-container">
                             <div class="row" id="player3-name-container">
                                 <div class="col-12" id="player3-name-content">

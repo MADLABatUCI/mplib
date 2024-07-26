@@ -62,14 +62,15 @@ Configure all of the game settings. This includes:
 
 //  Conatant Game Variables
 let GameName = "groupestimation";
-let MinPlayers = 2;
-let MaxPlayers = 2;
+let NumPlayers = 3;
+let MinPlayers = NumPlayers;
+let MaxPlayers = NumPlayers;
 let MaxSessions = 0;
 let PlayerReplacement = false;
 let LeaveWaitingRoomTime = 3;
 let MinPlayerTimeout = 0;
 let MaxSessionTime = 0;
-let SaveData = false;
+let SaveData = true;
 
 //  Configuration Settings for the Session
 const studyId = GameName; 
@@ -104,7 +105,7 @@ let funList = {
 };
 
 // List the node names where we place listeners for any changes to the children of these nodes; set to '' if listening to changes for children of the root
-let listenerPaths = [ '' ];
+let listenerPaths = [ 'players', 'images' ];
 
 //  Initialize the Game Session with all Configs
 initializeMPLIB( sessionConfig , studyId , funList, listenerPaths, verbosity );
@@ -120,172 +121,189 @@ Initialize all game variables that will be used. This includes:
     - Event Listeners
 */
 
-//  Global Variables
-let playerUniqueID;
+//  Game Global Variables
+let thisPlayerID = getCurrentPlayerId();
+let allPlayerIDs;
+console.log("Game Starting...", thisPlayerID);
 let playerIDsAll;
 let playerNumber;
-let gameState;
-let thisSession;
-let playerNEstimate = -1; // save a players no guess as -1, once a player has submitted a guess (> 0) then do something about it
-let delayStartNewGame = 3000;
-let emptyPlace = ' '; // this character represents the absence of a token and a lack of a winner (it is tempting to use "null" for this state, but firebase does not store any null variables and this can complicate the coding)
-let trialNumber = 0;
-let NumberOfImages = 3;
+let gameState = {
+    images: {},
+    players: {
+    }
+};
+let numberOfEstimates = 0;
 
-let images = {
+let playerNEstimate = -1; // save a players no guess as -1, once a player has submitted a guess (> 0) then do something about it
+let selectedImageArray;
+let trialNumber = 1;
+let NumberOfImages = 3;
+let imgPath = '/mplib/examples/groupestimation/images/';
+let estimationTimeStart;
+let estimationTimeEnd;
+
+let estimationImages = {
     image01 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_0JRIF5LHV_view5.png',
+        path            : imgPath + 'Sphere2_0JRIF5LHV_view5.png',
         trueEstimate    : 554,
     },
     image02 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_7ILGNRK2D_view5.png',
+        path            : imgPath + 'Sphere2_7ILGNRK2D_view5.png',
         trueEstimate    : 249,
     },
     image03 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_80NMDSOCB_view5.png',
+        path            : imgPath + 'Sphere2_80NMDSOCB_view5.png',
         trueEstimate    : 862,
     },
     image04 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_82DFOODCS_view5.png',
+        path            : imgPath + 'Sphere2_82DFOODCS_view5.png',
         trueEstimate    : 295,
     },
     image05 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_KGONB1PPB_view5.png',
+        path            : imgPath + 'Sphere2_KGONB1PPB_view5.png',
         trueEstimate    : 527,
     },
     image06 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_KPET24YYP_view5.png',
+        path            : imgPath + 'Sphere2_KPET24YYP_view5.png',
         trueEstimate    : 734,
     },
     image07 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_NIB1FRFXN_view5.png',
+        path            : imgPath + 'Sphere2_NIB1FRFXN_view5.png',
         trueEstimate    : 388,
     },
     image08 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_QJ7A2VLZJ_view5.png',
+        path            : imgPath + 'Sphere2_QJ7A2VLZJ_view5.png',
         trueEstimate    : 634,
     },
     image09 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_VL08RVUR5_view5.png',
+        path            : imgPath + 'Sphere2_VL08RVUR5_view5.png',
         trueEstimate    : 369,
     },
     image00 : {
-        path            : '/mplib/examples/groupestimation/images/Sphere2_VPVRI6MWB_view5.png',
+        path            : imgPath + 'Sphere2_VPVRI6MWB_view5.png',
         trueEstimate    : 872,
     },
 };
 
-let imageArray = Array.from({ length: 10 }, (v, k) => 'image0' + k * 1);
-let shuffledImageArray = imageArray.sort(function(){ return 0.5 - Math.random() });
-let selectedImages = shuffledImageArray.slice(0, NumberOfImages);
 
-let playerMapppings = {
-    player2: {
-        1: 2,
-        3: 3,
-        4: 4,
-        5: 5
-    },
-    player3: {
-        1: 2,
-        2: 3,
-        4: 4,
-        5: 5 
-    },
-    player4: {
-        1: 2,
-        2: 3,
-        3: 4,
-        5: 5
-    },
-    player5: {
-        1: 2,
-        2: 3,
-        3: 4,
-        4: 5
-    }
-};
+//  Game Graphics Handles
 
-// -------------------------------------
-//       Graphics handles
-// -------------------------------------
+//      Instructions
 let instructionsScreen = document.getElementById('instructionsScreen');
+let instructionsText = document.getElementById('instructionText');
+let joinButton = document.getElementById('joinBtn');
+
+//      Waiting Room
 let waitingRoomScreen = document.getElementById('waitingRoomScreen');
-let gameScreen = document.getElementById('gameScreen');
 let messageWaitingRoom = document.getElementById('messageWaitingRoom');
+
+//      Game Interface
+let gameScreen = document.getElementById('gameScreen');
 let messageGame = document.getElementById('messageGame');
-let messageFinish = document.getElementById('messageFinish');
-const submitGuess = document.getElementById('estimation-button');
+let submitGuess; // = document.getElementById('estimation-button');
 let playerID = document.getElementById('playerID');
 let messageToPlayer = document.getElementById('messageToPlayer');
-let instructionsText = document.getElementById('instructionText');
-let turnText = document.getElementById('turnMessage');
 let imageContainer = document.getElementById('image-to-estimate');
+let leaveButton = document.getElementById('leaveBtn');
 
-imageContainer.src = images[selectedImages[trialNumber]].path;
+//      Complete Screen
+let messageFinish = document.getElementById('messageFinish');
+
+
+//let turnText = document.getElementById('turnMessage');
+
+
+//imageContainer.src = images[selectedImages[trialNumber]].path;
 
 // Set up correct instructions
 instructionsText.innerHTML = `<p>This game demonstrates how to use the MPLIB library for the two-player turn-taking game of tic-tac-toe. Use the mouse
 to place your tokens on the board.</p><p>Open up this link at two different browser tabs (or two different browsers) to simulate the two players</p>`;
 
-// -------------------------------------
-//       Event Listeners
-// -------------------------------------
-// Buttons
-let joinButton = document.getElementById('joinBtn');
-let leaveButton = document.getElementById('leaveBtn');
 
-// Add event listeners to the buttons
+//  Game Event Listeners
+
+//      Join Button
 joinButton.addEventListener('click', function () {
-    joinSession(); // call the library function to attempt to join a session, this results either in starting a session directly or starting a waiting room
-});
-
-leaveButton.addEventListener('click', function () {
-    leaveSession(); // call the library function to leave a session. This then triggers the local function endSession
-});
-
-submitGuess.addEventListener('click', function () {
     /*
-        Event listener for what happens when the client submits their estimate.
-    */
-    //  Ensure that the estimate value is valid
-    if (_ensureClientEstimateIsValid()){
-        //  Update the display of the client guess (remove input box and place text of estimate)
-        _updateClientEstimateView();
-        //  Update the client player avater to be green
-        _updatePlayerAvatar(1);
-        //  Update the message to the client player
-        messageToPlayer.innerText = 'estimate received...waiting for other estimates'
-        //  Update the database to now include the client's estimate
-        updateStateDirect(
-            'state/player' + playerNumber,
-            {
-                estimate: Number(playerNEstimate)
-            }
-        );
-        //_updatePlayerAvatar(4);
-    } else {
-        console.log("still listening...");
-    };
+    Call the library function to attempt to join a session.
     
-    /*const placeIndex = cell.getAttribute('data-index');      
-    updateStateTransaction('state', 'placeToken', placeIndex ).then(success => {  
-        if (!success) {
-            console.log( 'You cannot make this move');
-        }
-    });*/
+    This results in one of the following:
+        - starting a session directly
+        - starting a waiting room
+    */
+    joinSession();
 });
 
-// -------------------------------------
-//      Game logic and UI
-// -------------------------------------
+//      Leave Button (End Session Button)
+leaveButton.addEventListener('click', function () {
+    /*
+    Call the library function to leave a session.
+    
+    This then triggers the local function endSession.
+    */
+    leaveSession();
+});
+
+/*
+    Game Logic and UI
+    -----------------
+
+Game logic and functionality. All functions for gameplay. This includes:
+    -
+    -
+    -
+*/
+function _randomizeImageSelection() {
+    /*
+    Randomize the images that will be used for the game.
+
+    Note:
+        - NumberOfImages is a global game variable
+
+    Params
+    ------
+    None
+
+    Returns
+    -------
+    Array
+        - Shuffled array of images to select
+    */
+    let imageArray = Array.from({ length: 10 }, (v, k) => 'image0' + k * 1);
+    let shuffledImageArray = imageArray.sort(function(){ return 0.5 - Math.random() });
+    let selectedImages = shuffledImageArray.slice(0, NumberOfImages);
+
+    return selectedImages;
+};
+
+function selectTrialImage(images, trial) {
+    /*
+    Select the image to display based on the trial number.
+
+    Params
+    ------
+    images  :   Array
+        - Array of images to select
+
+    trial   :   Number
+        - Current trial number
+
+    Return
+    ------
+    Object
+        - Object containing the image path and true estimate for the trial
+
+    */
+    return estimationImages[images[trial]]
+}
 function _ensureClientEstimateIsValid() {
     /*
         Ensure that the current client has submitted an estimate > 0.
     */
 
     // Get the estimate element
-    let clientEstimate = document.getElementById('player1-guess');
+    //let thisPlayerID = getCurrentPlayerId();
+    let clientEstimate = document.getElementById(thisPlayerID + '-guess');
     console.log("Client Estimate", clientEstimate);
     // Ensure the estimate is valid
     //  If the estimate is valid return true
@@ -301,49 +319,66 @@ function _ensureClientEstimateIsValid() {
     };
 };
 
-function _ensureOtherPlayerEstimateIsValid(n) {
+function _ensureOtherPlayerEstimateIsValid(player) {
     /*
         Ensure that the estimate from another player has submitted and estimate > 0.
     */
 
     console.log("Game State", gameState);
     // Get the estimate of playerNumber
-    let playerEstimate = gameState['player' + n].estimate;
+    let playerEstimate = gameState.players[player].estimate;
 
-    console.log("Player " + n + " Estimate", playerEstimate);
+    console.log("Player " + player + " Estimate", playerEstimate);
     // Ensure the estimate is valid
     //  If the estimate is valid return true
     //  If the estimate is invalid show a message to the client
     //      stating that it is invalid
     if (playerEstimate > 0) {
-        console.log("valid estimate for player " + n);
+        console.log("valid estimate for player " + player);
         return true;
     } else {
-        console.log("invalid estimate for player " + n);
+        console.log("invalid estimate for player " + player);
         return false;
     };
 };
 
-function _updateClientEstimateView() {
+function _updateClientEstimateView(estimateMade) {
     /*
         Update the estimate view for the current client once they have submitted
         their own estimate.
     */
-
     // Get the estimate element
-    let clientEstimateInput = document.getElementById('player1-guess');
-    let clientEstimateText  = document.getElementById('player1-guess-text');
+    let clientEstimateInput = document.getElementById(thisPlayerID + '-guess');
+    let clientEstimateText  = document.getElementById(thisPlayerID + '-guess-text');
+    let estimationButton = document.getElementById("estimation-button");
+    if (estimateMade) {
+        console.log("ESTIMATE MADE");
+        
+        // Hide the [input] element and the "Submit" button
+        clientEstimateInput.style.display = "none";
+        estimationButton.style.display = "none";
+        // Display the Client Estimate as text
+        clientEstimateText.style.display = null;
+        clientEstimateText.innerText = clientEstimateInput.value;
+    } else {
+        console.log("RESETTING ESTIMATES");
 
-    // Hide the [input] element
-    clientEstimateInput.style.display = "none";
-    clientEstimateText.innerText = clientEstimateInput.value;
+        // Show the [input] element (and reset value) and the "Submit" button
+        clientEstimateInput.value = null;
+        clientEstimateInput.style.display = null;
+        estimationButton.style.display = null;
+        // Hide the Client Estimate text value
+        clientEstimateText.innerText = "--";
+        clientEstimateText.style.display = "none";
+    }
+    
 };
 
-function _updatePlayerEstimateView(n) {
+/*function _updatePlayerEstimateView(n) {
     /*
         Update the estimate view for the another player once they have submitted
         their own estimate.
-    */
+    * /
     let playerToUpdate;
     let playerEstimate = gameState['player' + n].estimate;
 
@@ -365,9 +400,178 @@ function _updatePlayerEstimateView(n) {
     playerEstimateText.innerText = playerEstimate;
 
     _updatePlayerAvatar(playerToUpdate);
+};*/
+
+function _updatePlayerEstimateViewV2(player, estimateMade) {
+    /*
+        Update the estimate view for the another player once they have submitted
+        their own estimate.
+    */
+    console.log("trying to update avatar");
+    let playerEstimate = gameState.players[player].estimate;
+
+    //let thisPlayerID = getCurrentPlayerId();
+    let playerEstimateText;
+    // Get the estimate element
+    if (player == thisPlayerID) {console.log("current player");} else {
+        console.log("Updating other player");
+        console.log("player to update", player);
+        let playerNudgeButton = document.getElementById(player + '-nudge-button');
+        playerNudgeButton.style.display = "none";
+    }
+
+    playerEstimateText = document.getElementById(player + '-guess-text');
+    if (estimateMade) {
+        console.log("Updating player estimate");
+        playerEstimateText.innerText = playerEstimate;
+    } else {
+        playerEstimateText.innerText = "----";
+    }
+    
+
+    console.log("updating player avater");
+    _updatePlayerAvatarV2()
 };
 
-function _updatePlayerAvatar(n) {
+function _setPlayerAvatarCSS() {
+    /*
+        Update Player N's avatar if they have made an estimate
+    */
+
+    console.log("setting CSS");
+    // Get element responsible for player avatar colors
+    let root = document.querySelector(":root");
+    console.log("Root", root);
+    let allPlayerIDs = getCurrentPlayerIds();
+    allPlayerIDs.forEach((player) => root.style.setProperty(
+        "--" + player + "-avatar-backgroundcolor", 'lightgray'
+    ));
+    console.log("set all players as light gray");
+    //let thisPlayerID = getCurrentPlayerId();
+    root.style.setProperty(
+        "--" + thisPlayerID + "-avatar-backgroundcolor", 'black'
+    )
+    console.log("set this player as black");
+
+};
+
+function _createThisPlayerAvatar() {
+    let thisPlayerContainer = document.getElementById('player1-container');
+
+    //let thisPlayerID = getCurrentPlayerId();
+    thisPlayerContainer.innerHTML = `
+    <div class="row" id="${thisPlayerID}-container">
+        <div class="col-12" id="${thisPlayerID}-content">
+            <h3 id="${thisPlayerID}-name">You</h3>
+        </div>
+    </div>
+    <div class="row" id="${thisPlayerID}-avatar-container">
+        <div class="col-12" id="${thisPlayerID}-avatar-content">
+            <div class="person" id="player1">
+
+            </div>
+        </div>
+    </div>
+    <div class="row" id="${thisPlayerID}-guess-container">
+        <div class="col-12" id="${thisPlayerID}-guess-content-input">
+            <input class="guess" id="${thisPlayerID}-guess" type="number" value="" required>
+        </div>
+        <div class="col-12" id="${thisPlayerID}-guess-content-text">
+            <h4 id="${thisPlayerID}-guess-text"></h4>
+        </div>
+    </div>
+    <div class="row" id="player1-submit-container">
+        <div class="col-12" id="player1-submit-content">
+            <button type="button" class="btn btn-dark" id="estimation-button">
+                Submit
+            </button>
+        </div>
+    </div>
+    `;
+    submitGuess = document.getElementById('estimation-button');
+    //      Submit Guess Button
+    submitGuess.addEventListener('click', function () {
+    /*
+        Event listener for what happens when the client submits their estimate.
+    */
+    //  Ensure that the estimate value is valid
+    if (_ensureClientEstimateIsValid()){
+        estimationTimeEnd = new Date();
+        //  Update the display of the client guess (remove input box and place text of estimate)
+        _updateClientEstimateView(1);
+        //  Update the client player avater to be green
+        _updatePlayerAvatar(1, 'green');
+        //  Update the message to the client player
+        messageToPlayer.innerText = 'estimate received...waiting for other estimates'
+        //  Update the database to now include the client's estimate
+        //let thisPlayerID = getCurrentPlayerId();
+        updateStateDirect(
+            `players/${thisPlayerID}`,
+            {
+                estimate: Number(playerNEstimate),
+                timeForEstimate: estimationTimeEnd - estimationTimeStart
+            }
+        );
+    } else {
+        console.log("still listening...");
+    };
+
+});
+};
+
+function _createOtherPlayerAvatar() {
+    
+    let otherPlayerContainer = document.getElementById('other-player-content');
+
+    let thisPlayerID = getCurrentPlayerId();
+    let allPlayerIDs = getCurrentPlayerIds();
+    let otherPlayerCountID = 2;
+    allPlayerIDs.forEach((player) => {
+        if (player == thisPlayerID){} else {
+            let columnSize;
+            if (allPlayerIDs.length == 5){
+                columnSize = 3;
+            } else if (allPlayerIDs.length == 4) {
+                columnSize = 4;
+            } else if (allPlayerIDs.length == 3) {
+                columnSize = 6;
+            } else {
+                columnSize = 12;
+            };
+            otherPlayerContainer.innerHTML += `
+                <div class="col-${columnSize}" id="${player}-container">
+                    <div class="row" id="${player}-name-container">
+                        <div class="col-12" id="${player}-name-content">
+                            <h3 id="${player}-name">Player ${otherPlayerCountID}</h3>
+                        </div>
+                    </div>
+                    <div class="row" id="${player}-avatar-container">
+                        <div class="col-12" id="${player}-avatar-content">
+                            <div class="person" id="player2">
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" id="${player}-guess-container">
+                        <div class="col-12" id="${player}-nudge-content">
+                            <button type="button" class="btn btn-danger" id="${player}-nudge-button" disabled hidden>
+                                Nudge
+                            </button>
+                        </div>
+                        <div class="col-12" id="${player}-guess-content-text">
+                            <h4 id="${player}-guess-text">----</h4>
+                        </div>
+                    </div>
+                </div>
+            `;
+            otherPlayerCountID++;
+        }
+    });
+    
+
+};
+
+function _updatePlayerAvatar(n, color) {
     /*
         Update Player N's avatar if they have made an estimate
     */
@@ -376,59 +580,81 @@ function _updatePlayerAvatar(n) {
     let root = document.querySelector(":root");
 
     // Update the color
-    root.style.setProperty("--player" + n + "avatar-backgroundcolor", 'green');
+    root.style.setProperty("--player" + n + "avatar-backgroundcolor", color);
 
 
+};
+
+function _updatePlayerAvatarV2(player) {
+    /*
+        Update Player N's avatar if they have made an estimate
+    */
+
+    // Get element responsible for player avatar colors
+    let root = document.querySelector(":root");
+
+    // Update the color
+    root.style.setProperty("--" + player + "-avatar-backgroundcolor", 'green');
+
+
+};
+
+function _createNewGameState() {
+    /*
+    Create a new game state initializing the database game state object.
+
+    */
+    let newGameState = {};
+
+    let numPlayers = getNumberCurrentPlayers();
+    let thisPlayerID = getCurrentPlayerId();
+    let allPlayerIDs = getCurrentPlayerIds();
+
+    // Iterate
+    // iterate over selected images
+    // create an object of objects
+    console.log("Creating game state");
+    console.log("Setting random image order");
+    selectedImageArray = _randomizeImageSelection();
+    console.log("Selected Images:", selectedImageArray);
+    let trialCount = 1;
+    for (let i = 0; i < selectedImageArray.length; i++) {
+        newGameState["trialImage0" + trialCount] = {
+            path: estimationImages[selectedImageArray[i]].path,
+            trial: trialCount,
+            trueEstimate: estimationImages[selectedImageArray[i]].trueEstimate,
+            imageKeyName: selectedImageArray[i]
+        };
+        trialCount++;
+    }
+    console.log("New Game State");
+    /*allPlayerIDs.forEach((player) => newGameState[player] = {
+        'estimate': -1,
+        'timeForEstimate': -1,
+    });*/
+
+    console.log(newGameState);
+
+    return newGameState;
 };
 
 function newGame() {
     // Initialize a game
     //let whoStarts;
-    let newState;
+    _setPlayerAvatarCSS();
+    _createThisPlayerAvatar();
+    _createOtherPlayerAvatar();
 
-    // If we have an existing game, we go to the next round
-    if (gameState) {
-        //whoStarts = gameState.playerStarted === 'O' ? 'X' : 'O'; // the player who didn't start last game now starts
-        newState = {
-            numberOfObjects: 100,
-            player1: {
-                pid: playerUniqueID,
-                estimate: playerNEstimate,
-            },
-            player2: {
-                pid: playerUniqueID,
-                estimate: playerNEstimate,
-            },
-            //currentPlayer: whoStarts, // who is starting this turn?
-            //playerStarted: whoStarts, // who started this game?
-            //firstArrival: gameState.firstArrival, // keep the assignments of first-arrived player
-            //winner: emptyPlace,
-            round: gameState.round + 1
-        };
-    } else {  // Otherwise, we start from scratch
-        //whoStarts = Math.random() < 0.5 ? 'X' : 'O'; // randomly assign whether "X" or "O" starts
-        newState = {
-            numberOfObjects: 100,
-            player1: {
-                pid: playerUniqueID,
-                estimate: playerNEstimate,
-            },
-            player2: {
-                pid: playerUniqueID,
-                estimate: playerNEstimate,
-            },
-            //currentPlayer: whoStarts, // who is starting this turn?
-            //playerStarted: whoStarts, // who started this game?
-            //firstArrival: Math.random() < 0.5 ? 'X' : 'O', // The assignment of the player who arrived first in the session
-            //winner: emptyPlace,
-            round: 1
-        };
-    }
+    let newState;
+    newState = _createNewGameState();
     
     // Each player will attempt to initialize the game but only the first player (client) to 
     // run this transaction will be able to initialize the state. We place the game state under the node 'state'
     // as this will broadcast the entire gamestate to players (including /board, /currentPlayer, etc) 
-    updateStateTransaction( 'state' , 'initialize' , newState ).then(success => {
+    updateStateTransaction( 'images/trialImages' , 'initialize' , newState ).then(success => {
+        // path in database would be
+        //  images/trialImages/
+
         // Note that updates to the game state are not done in this conditional statement. If the transaction
         // is successful, the state will be broadcast to all players and the "receiveUpdate" function can be
         // used to update the local game state
@@ -438,6 +664,8 @@ function newGame() {
             console.log( 'The game is initialized by this player');
         }
     });
+
+    //displayTrialImage();
 }
 
 // Function to update the UI
@@ -449,7 +677,16 @@ function updateUI() {
             - A player makes an estimate
             - A player nudges another player
     */
-    for (let i = 1; i <= 5; i++) {
+    console.log("update has been made");
+    let allPlayerIDs = getCurrentPlayerIds();
+
+
+    allPlayerIDs.forEach((player) => {
+        if (_ensureOtherPlayerEstimateIsValid(player)) {
+            _updatePlayerEstimateViewV2(player, 1);
+        };
+    });
+    /*for (let i = 1; i <= 5; i++) {
         console.log("updating ", i);
         if (i === playerNumber) {
             console.log("this is the current player number", i);
@@ -458,33 +695,60 @@ function updateUI() {
             if (_ensureOtherPlayerEstimateIsValid(i)){
                 //  Update the display of the client guess (remove input box and place text of estimate)
                 _updatePlayerEstimateView(i);
+
                 //  Update the client player avater to be green
                 //_updatePlayerAvatar(1);
             }
         }
-    }
+    }*/
+};
+
+function resetTrialParams() {
     /*
-    gameState.board.forEach((value, placeIndex) => {
-        cells[placeIndex].innerText = value;
-    });
-
-    let str = '';
-    if ((gameState.winner === 'X') || (gameState.winner === 'O')) {
-        str = `${gameState.winner} wins!`;
-    } else if (gameState.winner === 'XO') {
-        str = 'Draw!';
-    } else {
-        // Is it this player's turn?
-        if (((thisSession.arrivalIndex===1) && (gameState.currentPlayer === gameState.firstArrival)) ||   
-            ((thisSession.arrivalIndex===2) && (gameState.currentPlayer !== gameState.firstArrival))) {
-            str = `You are player ${gameState.currentPlayer}. It is your turn...`
-        } else {
-            str = `Waiting for the other player...`
-        }
-    }
-
-    turnText.innerText = str;
+    Reset all trial parameters.
     */
+    numberOfEstimates = 0;
+    allPlayerIDs.forEach((player) => {
+        if (player == thisPlayerID) {
+            _updateClientEstimateView(0);
+            _updatePlayerAvatar(1, 'black');
+        } else {
+            _updatePlayerEstimateViewV2(player, 0);
+        };
+    });
+    
+};
+
+function startInitialTrial() {
+    /*
+    Start a new estimation trial.
+    */
+    console.log("Starting the initial trial");
+    // Set the Image
+    imageContainer.src = gameState.images.trialImages['trialImage0' + trialNumber].path;
+    estimationTimeStart = new Date();
+};
+
+function startNextTrial() {
+    /*
+    Start a new estimation trial.
+    */
+    resetTrialParams();
+    console.log("Starting a new trial");
+    // Set the Image
+    imageContainer.src = gameState.images.trialImages['trialImage0' + trialNumber].path;
+    estimationTimeStart = new Date();
+};
+
+function trialsComplete() {
+    /*
+    Show the finish screen.
+    */
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'none';
+    gameScreen.style.display = 'none';
+    finishScreen.style.display = 'block';
+    endSession();
 }
 
 
@@ -494,18 +758,50 @@ function updateUI() {
 //   (note: all timestamps are server-side expressed in milliseconds since the Unix Epoch)
 // --------------------------------------------------------------------------------------
 // Function to receive state changes from Firebase
-function receiveStateChange(nodeName, newState, typeChange ) {
-    if (nodeName === 'state') {
-        gameState = newState;
-        updateUI();
+function receiveStateChange(pathNow, nodeName, newState, typeChange ) {
+    console.log("State change received");
+    console.log("pathNow", pathNow);
+    console.log("nodeName", nodeName);
+    console.log("New state", newState);
+    console.log("type change", typeChange);
+    console.log("Number of Estimates", numberOfEstimates);
+    console.log("Current Game State");
+    console.log(gameState);
 
-        /*
-        if (gameState.winner !== emptyPlace) {
-            setTimeout(function() {
-                // Propose a new game
-                newGame();
-            }, delayStartNewGame );
-        }*/
+    
+
+    if (pathNow == "players") {
+        let player = nodeName;
+        gameState.players[player] = newState;
+        if (_ensureOtherPlayerEstimateIsValid(player)) {
+            _updatePlayerEstimateViewV2(player, 1);
+            numberOfEstimates++;
+        };
+
+        if (numberOfEstimates == getNumberCurrentPlayers()) {
+            trialNumber++;
+            if (trialNumber > NumberOfImages) {
+                setTimeout(trialsComplete, 3000);
+            } else {
+                setTimeout(startNextTrial, 3000);
+                console.log("Timeout waited 5 seconds");
+                //sleep 3 seconds
+                //get the next image
+                //load image
+                //start trial
+                console.log("all players have submitted an estimate");
+            }
+        } else {
+            console.log("Still waiting for players");
+        }
+    } else if (pathNow == "images") {
+        //console.log()
+        gameState.images.trialImages = newState;
+        console.log("Current Game State");
+        console.log(gameState);
+        startInitialTrial();
+        //imageContainer.src = gameState.images.trialImages['trialImage01'].path;
+        //trialNumber = gameState.image.trial + 1;
     }
 }
 
@@ -514,41 +810,16 @@ function evaluateUpdate( path, state, action, actionArgs ) {
     let isAllowed = false;
     let newState = null;
 
-    if ((action === 'initialize') && ((state === null) || state.winner !== emptyPlace)) {
+    if ((action === 'initialize') && ((state === null))) {
         isAllowed = true;
         newState = actionArgs;
     }
-    /*
-    if ((action === 'placeToken') && (state.winner === emptyPlace )) {
-        // Is it this player's turn?
-        if (((thisSession.arrivalIndex===1) && (state.currentPlayer === state.firstArrival)) ||   
-            ((thisSession.arrivalIndex===2) && (state.currentPlayer !== state.firstArrival))) {
 
-            // Can a token be placed here?
-            let placeIndex = actionArgs;
-            if ((state.board[ placeIndex ] !== 'X') && (state.board[ placeIndex ] !== 'O')) {
-                isAllowed = true;
-                newState = state;
-                newState.board[placeIndex] = newState.currentPlayer;
-                
-                // Check if all places are filled
-                const isBoardFilledWithXorO = newState.board.every(cell => cell === 'X' || cell === 'O');
+    console.log("Initial State");
+    console.log(state);
+    console.log("Initial actionArgs");
+    console.log(actionArgs);
 
-                // Is this a winning move?
-                if (checkWinner( newState.board )) {
-                    newState.winner = newState.currentPlayer;
-                } else if (isBoardFilledWithXorO) {
-                    // A draw                   
-                    newState.winner = 'XO';
-                } else {
-                    // Give the turn to the next player
-                    newState.currentPlayer = newState.currentPlayer === 'X' ? 'O' : 'X';
-                }
-                
-            }        
-        }
-    }
-    */
     let actionResult = { isAllowed, newState };
     return actionResult;
 }
@@ -571,13 +842,14 @@ function joinWaitingRoom(sessionInfo) {
             - Creates an appropriate message based on players needed and players in waiting room
             - Displays the waiting room screen
     */
-    thisSession = sessionInfo;
-
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let numPlayers = sessionInfo.numPlayers;
+    let playerId = getCurrentPlayerId(); // the playerId for this client
+    let numPlayers = getNumberCurrentPlayers(); // the current number of players
+    let numNeeded = sessionConfig.minPlayersNeeded - numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
+    
     let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
     messageWaitingRoom.innerText = str2;
-
+    
+    // switch screens from instruction to waiting room
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
 }
@@ -596,18 +868,18 @@ function updateWaitingRoom(sessionInfo) {
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'block';
 
-    let numNeeded = sessionConfig.minPlayersNeeded - sessionInfo.numPlayers;
-    let numPlayers = sessionInfo.numPlayers;
-    let str2;
-
-    if (sessionInfo.status == 'waitingRoomCountdown') {
-        str2 = `Game will start in ${ sessionInfo.countdown } seconds...`;
-    }  else {       
-        str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
+    // Waiting Room is full and we can start game
+    let [ doCountDown , secondsLeft ] = getWaitRoomInfo();
+    if (doCountDown) {
+        let str2 = `Game will start in ${ secondsLeft } seconds...`;
+        messageWaitingRoom.innerText = str2;
+    } else { // Still waiting for more players, update wait count
+        let numPlayers = getNumberCurrentPlayers(); // the current number of players
+        let numNeeded = sessionConfig.minPlayersNeeded - numPlayers; // Number of players still needed (in case the player is currently in a waiting room)
+        
+        let str2 = `Waiting for ${ numNeeded } additional ${ numPlayers > 1 ? 'players' : 'player' }...`;
+        messageWaitingRoom.innerText = str2;
     }
-
-    messageWaitingRoom.innerText = str2;
-    thisSession = sessionInfo;
 }
 
 function startSession(sessionInfo) {
@@ -622,24 +894,27 @@ function startSession(sessionInfo) {
     */
     // Assign playerUniqueID
     // sessinoInfo.playerID
-    playerUniqueID = sessionInfo.playerId;
+    /*playerUniqueID = sessionInfo.playerId;
     playerIDsAll = sessionInfo.playerIds;
     console.log("all player IDs", playerIDsAll);
-    playerNumber = sessionInfo.arrivalIndex;
+    playerNumber = sessionInfo.arrivalIndex;*/
 
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
     
-    let dateString = timeStr(sessionInfo.sessionStartedAt);
-    let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
+    let playerId = getCurrentPlayerId(); // the playerId for this client
+    let dateString = timeStr(getPlayerInfo( playerId ).sessionStartedAt);
+    let str = `Started game with session id ${getSessionId()} with ${getNumberCurrentPlayers()} players at ${dateString}.`;
     myconsolelog( str );
 
-    playerID.innerText = playerNumber;
+    playerID.innerText = 1;
     //let str2 = `<p>The game has started...</p><p>Number of players: ${ sessionInfo.numPlayers}</p><p>Session ID: ${ sessionInfo.sessionId}$</p>`;
     //messageGame.innerHTML = str2;
 
-    thisSession = sessionInfo;
+    //thisSession = sessionInfo;
+    allPlayerIDs = getCurrentPlayerIds();
+    console.log("Session Starts here...", allPlayerIDs);
     newGame();
 }
 
@@ -664,31 +939,41 @@ function updateOngoingSession(sessionInfo) {
 }
 
 function endSession( sessionInfo ) {
+    /*
+    Functionality to invoke when ending a session.
+
+    This function does the following:
+        - Displays the finish screen (hides all other divs)
+        - Checks if any players terminated their session abnormally
+            - If so, an "abnormal termination" message is created
+            - If not, then the session completed normally
+        - Displays a message based on the termination status [normal, abnormal]
+    */
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'none';
     finishScreen.style.display = 'block';
 
-    if (sessionInfo.sessionErrorCode != 0) {
-        messageFinish.innerHTML = `<p>Session ended abnormally. Reason: ${sessionInfo.sessionErrorMsg}</p>`;
+    let err = getSessionError();
+
+    if ( anyPlayerTerminatedAbnormally()) {
+        // Another player closed their window or were disconnected prematurely
+        messageFinish.innerHTML = `<p>Session ended abnormally because the other player closed their window or was disconnected</p>`;
+        
+    } else if (err.errorCode == 1) {
+        // No sessions available
+        messageFinish.innerHTML = `<p>Session ended abnormally because there are no available sessions to join</p>`;
+    } else if (err.errorCode==2) {
+        // This client was disconnected (e.g. internet connectivity issues) 
+        messageFinish.innerHTML = `<p>Session ended abnormally because you are experiencing internet connectivity issues</p>`;
+    } else if (err.errorCode==3) {
+        // This client is using an incompatible browser
+        messageFinish.innerHTML = `<p>Session ended abnormally because you are using the Edge browser which is incompatible with this experiment. Please use Chrome or Firefox</p>`;
     } else {
         messageFinish.innerHTML = `<p>You have completed the session.</p>`;
     }
-    thisSession = sessionInfo;
-}
+};
 
-/*
-// This callback function is triggered when this client gains control over dynamic objects
-export function gainedControl() {
-    myconsolelog('Client gained control');
-}
-
-// This  callback function is triggered when this client loses control over dynamic objects
-// e.g., when client's browser loses focus
-export function losesControl() {
-    myconsolelog('Client loses control');
-}
-*/
 
 // -------------------------------------
 //       Display Information
