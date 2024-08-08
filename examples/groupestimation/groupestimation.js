@@ -502,7 +502,7 @@ function _createThisPlayerAvatar() {
         //  Update the client player avater to be green
         _updatePlayerAvatar(1, 'green');
         //  Update the message to the client player
-        messageToPlayer.innerText = 'estimate received...waiting for other estimates'
+        messageToPlayer.innerText = 'estimate received...waiting for other estimates';
         //  Update the database to now include the client's estimate
         //let thisPlayerID = getCurrentPlayerId();
         updateStateDirect(
@@ -729,15 +729,37 @@ function startInitialTrial() {
     estimationTimeStart = new Date();
 };
 
-function startNextTrial() {
+function examineCurrentTrial() {
+    /*
+    Give participants time to examine the current trial and all participant estimates.
+    */
+    console.log("Examining a current trial");
+    messageToPlayer.innerText = 'new trial is loading...';
+    imageContainer.style.opacity = 0;
+    setTimeout(loadNextTrial, 2000);
+};
+
+function loadNextTrial() {
     /*
     Start a new estimation trial.
     */
     resetTrialParams();
-    console.log("Starting a new trial");
+    console.log("Loading a new trial");
+    messageToPlayer.innerText = 'make your guess';
     // Set the Image
     imageContainer.src = gameState.images.trialImages['trialImage0' + trialNumber].path;
+    //estimationTimeStart = new Date();
+    setTimeout(startNextTrial, 100);
+};
+
+function startNextTrial() {
+    /*
+    Start a new estimation trial.
+    */
+    console.log("Starting a new trial");
+    // Set the Image
     estimationTimeStart = new Date();
+    imageContainer.style.opacity = 1;
 };
 
 function trialsComplete() {
@@ -749,7 +771,7 @@ function trialsComplete() {
     gameScreen.style.display = 'none';
     finishScreen.style.display = 'block';
     endSession();
-}
+};
 
 
 // --------------------------------------------------------------------------------------
@@ -780,11 +802,16 @@ function receiveStateChange(pathNow, nodeName, newState, typeChange ) {
 
         if (numberOfEstimates == getNumberCurrentPlayers()) {
             trialNumber++;
+            messageToPlayer.innerText = 'all estimates received';
             if (trialNumber > NumberOfImages) {
-                setTimeout(trialsComplete, 3000);
+                setTimeout(trialsComplete, 2000);
             } else {
-                setTimeout(startNextTrial, 3000);
-                console.log("Timeout waited 5 seconds");
+                // break this up
+                // 2 seconds of stare time
+                // 2 seconds of blank image to signal new trial
+                // new trial starts
+                setTimeout(examineCurrentTrial, 2000);
+                //console.log("Timeout waited 5 seconds");
                 //sleep 3 seconds
                 //get the next image
                 //load image
@@ -833,7 +860,7 @@ function removePlayerState( playerId ) {
 //   Handle any session change relating to the waiting room or ongoing session 
 // --------------------------------------------------------------------------------------
 
-function joinWaitingRoom(sessionInfo) {
+function joinWaitingRoom() {
     /*
         Functionality to invoke when joining a waiting room.
 
@@ -854,7 +881,7 @@ function joinWaitingRoom(sessionInfo) {
     waitingRoomScreen.style.display = 'block';
 }
 
-function updateWaitingRoom(sessionInfo) {
+function updateWaitingRoom() {
     /*
         Functionality to invoke when updating the waiting room.
 
@@ -882,7 +909,7 @@ function updateWaitingRoom(sessionInfo) {
     }
 }
 
-function startSession(sessionInfo) {
+function startSession() {
     /*
         Funtionality to invoke when starting a session.
 
@@ -919,7 +946,7 @@ function startSession(sessionInfo) {
 }
 
 // This callback function is triggered when session is active, but number of players changes
-function updateOngoingSession(sessionInfo) {    
+/*function updateOngoingSession(sessionInfo) {    
     let dateString = timeStr(sessionInfo.sessionStartedAt);
     let str = `Started game with session id ${sessionInfo.sessionIndex} with ${sessionInfo.numPlayers} players at ${dateString}.`;
     myconsolelog( str );
@@ -936,9 +963,17 @@ function updateOngoingSession(sessionInfo) {
         messageFinish.innerHTML = `<p>The other player has left the session.</p>`;
         leaveSession();
     }
-}
+}*/
 
-function endSession( sessionInfo ) {
+function updateOngoingSession() {
+    /*
+        Functionality to invoke when updating an ongoing session.
+  
+        This function is currently empty.
+    */
+  }
+
+function endSession() {
     /*
     Functionality to invoke when ending a session.
 
@@ -997,3 +1032,23 @@ function timeStr(timestamp) {
     let timeString = `${hours}:${minutes}:${seconds}`;
     return timeString;
 }
+
+/*
+Doc Notes:
+
+Function Definitions
+    getAllPlayerIDs()
+        // what does it do
+
+    State Changes
+        - Transactions can be left for later documenting
+
+Create a walkthrough of documentation for an experiment (tic-tac-toe, pong)
+*/
+
+
+/*
+For HRI Reimbur
+
+KFS - PC15663
+*/
