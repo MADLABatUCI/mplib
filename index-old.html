@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPLIB Demonstrations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="general_gray.css">
+</head>
+<body>
+    <div class="container">
+        <h1>MPLIB demos</h1>
+        To run the demos, open up these links in different browser tabs (or different browsers)
+        <ul>
+            <li>
+                <a href="examples/gridworld/gridworld.html">Gridworld game</a>
+            </li>
+            <li>
+                <a href="examples/pong/mppong.html?minPlayersNeeded=2&maxPlayersNeeded=2&fps=60">Two-player Pong</a></li>
+            </li>
+            <li>
+                <a href="examples/virtualworld/virtualworld.html">Virtual 3D world (desktop/VR)</a>
+            </li>
+            <li>
+                <a href="examples/tictactoe/tictactoe.html">Tic-Tac-Toe (two player turn taking)</a>
+            </li>
+            <li>
+                <a href="examples/groupestimation/groupestimation.html">Group Estimation</a>
+            </li>
+            <li>
+                Skeleton code for testing session formation
+                <ul>
+                    <li><a href="examples/skeleton/mpskeleton.html?minPlayersNeeded=1&maxPlayersNeeded=2">minPlayersNeeded=1; maxPlayersNeeded=2</a></li>
+                    <li><a href="examples/skeleton/mpskeleton.html?minPlayersNeeded=2&maxPlayersNeeded=2">minPlayersNeeded=2; maxPlayersNeeded=2</a></li>
+                    <li><a href="examples/skeleton/mpskeleton.html?minPlayersNeeded=3&maxPlayersNeeded=3">minPlayersNeeded=3; maxPlayersNeeded=3</a></li>
+                </ul>
+            </li>
+            
+        </ul>
+        
+    </div>
+</body>
+</html>
+
+<!--
+
+    Convert the index.html file to a table
+
+    Game Name | Type of Game | Mini Description
+    Tic-Tac-Toe | Turn Taking | 
+    Group Estimation | Continous Turn Taking |
+    Pong | Continuous | Continuous movement
+    3D World | Continuous |
+    Grid World | Continuous | Discrete movements (asynch)
+
+
+    Continuous: You don't have to wait for other players to make a move. You can move and play the game.
+
+    Turn-Taking: You need to wait for your turn
+
+    Group Estimation: Working on the same problem but you don't have to wait for other players you can make your estimate at any time
+        - 
+-->

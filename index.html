@@ -7,9 +7,175 @@
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="general_gray.css">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <style>
+        .table {
+            td, th {
+                vertical-align: middle;
+                text-align: center;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <h1>MPLib.js Game Demos</h1>
+                <p class="text-center">
+                    To run the demos, open up these links in different browser tabs (or different browsers). Click on the game image to open that game in a new tab.
+                    <br />
+                    To create your own games using MPLib.js, visit our
+                    <a href=""> <!-- Will add the link to the documentation when it is at a better stage. -->
+                        documentation page
+                    </a>.
+                </p>
+                <table class="table">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="w-25" scope="col">
+                                Game
+                            </th>
+                            <th class="w-25" scope="col">
+                                Name
+                            </th>
+                            <!--<th scope="col">
+                                Type
+                            </th>-->
+                            <th class="w-50 text-start" scope="col">
+                                Type & Description
+                            </th>
+                        </tr>
+                    </thead>
+                </table>
+                <div class="table-responsive" style="height: 75vh">
+                    <table class="table table-image table-hover">
+                        <tbody class="">
+                            <!-- GRIDWORLD -->
+                            <tr>
+                                <td class="w-25">
+                                    <a href="examples/gridworld/gridworld.html" target="_blank" rel="noopener noreferrer">
+                                        <img class="img-fluid img-thumbnail" src="images/gridworld.png">
+                                    </a>
+                                </td>
+                                <th class="w-25" scope="row">
+                                    <a href="examples/gridworld/gridworld.html" target="_blank" rel="noopener noreferrer">
+                                        Gridworld
+                                    </a>
+                                </th>
+                                <!-- <td>
+                                    Continuous
+                                </td> -->
+                                <td class="w-50 text-start">
+                                    Continuous
+                                    <br />
+                                    <br />
+                                    <!-- Add game type description here. -->
+                                    You don't have to wait for other players to make a move. You can move and play the game.
+                                </td>
+                            </tr>
+                            <!-- 2-PLAYER PONG -->
+                            <tr>
+                                <td class="w-25">
+                                    <a href="examples/pong/mppong.html?minPlayersNeeded=2&maxPlayersNeeded=2&fps=60" target="_blank" rel="noopener noreferrer">
+                                        <img class="img-fluid img-thumbnail" src="images/2playerpong.png">
+                                    </a>
+                                </td>
+                                <th scope="row">
+                                    <a href="examples/pong/mppong.html?minPlayersNeeded=2&maxPlayersNeeded=2&fps=60" target="_blank" rel="noopener noreferrer">
+                                        2-Player Pong
+                                    </a>
+                                </th>
+                                <!-- <td>
+                                    Continuous
+                                </td> -->
+                                <td class="w-50 text-start">
+                                    Continuous
+                                    <br />
+                                    <br />
+                                    <!-- Add game type description here. -->
+                                    You don't have to wait for other players to make a move. You can move and play the game.
+                                </td>
+                            </tr>
+                            <!-- VIRTUAL 3D WORLD -->
+                            <tr>
+                                <td class="w-25">
+                                    <a href="examples/virtualworld/virtualworld.html" target="_blank" rel="noopener noreferrer">
+                                        <img class="img-fluid img-thumbnail" src="images/virtual3dworld.png">
+                                    </a>
+                                </td>
+                                <th scope="row">
+                                    <a href="examples/virtualworld/virtualworld.html" target="_blank" rel="noopener noreferrer">
+                                        Virtual 3D World (desktop/VR)
+                                    </a>
+                                </th>
+                                <!-- <td>
+                                    Continuous
+                                </td> -->
+                                <td class="w-50 text-start">
+                                    Continuous
+                                    <br />
+                                    <br />
+                                    <!-- Add game type description here. -->
+                                    You don't have to wait for other players to make a move. You can move and play the game.
+                                </td>
+                            </tr>
+                            <!-- TIC-TAC-TOE -->
+                            <tr>
+                                <td class="w-25">
+                                    <a href="examples/tictactoe/tictactoe.html" target="_blank" rel="noopener noreferrer">
+                                        <img class="img-fluid img-thumbnail" src="images/tictactoe.png">
+                                    </a>
+                                </td>
+                                <th scope="row">
+                                    <a href="examples/tictactoe/tictactoe.html" target="_blank" rel="noopener noreferrer">
+                                        Tic-Tac-Toe
+                                    </a>
+                                </th>
+                                <!-- <td>
+                                    Continuous
+                                </td> -->
+                                <td class="w-50 text-start">
+                                    Turn-Taking
+                                    <br />
+                                    <br />
+                                    <!-- Add game type description here. -->
+                                    You need to wait for your turn.
+                                </td>
+                            </tr>
+                            <!-- GROUP ESTIMATION -->
+                            <tr>
+                                <td class="w-25">
+                                    <a href="examples/groupestimation/groupestimation.html" target="_blank" rel="noopener noreferrer">
+                                        <img class="img-fluid img-thumbnail" src="images/groupestimation.png">
+                                    </a>
+                                </td>
+                                <th scope="row">
+                                    <a href="examples/groupestimation/groupestimation.html" target="_blank" rel="noopener noreferrer">
+                                        Group Estimation
+                                    </a>
+                                </th>
+                                <!-- <td>
+                                    Continuous
+                                </td> -->
+                                <td class="w-50 text-start">
+                                    Continuous Turn-Taking
+                                    <br />
+                                    <br />
+                                    <!-- Add game type description here. -->
+                                    Working on the same problem but you don't have to wait for other players you can make your estimate at any time.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--<div class="container">
         <h1>MPLIB demos</h1>
         To run the demos, open up these links in different browser tabs (or different browsers)
         <ul>
@@ -39,6 +205,33 @@
             
         </ul>
         
-    </div>
+    </div>-->
+
+    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous">
+    </script>
 </body>
 </html>
+
+<!--
+
+    Convert the index.html file to a table
+
+    Game Name | Type of Game | Mini Description
+    Tic-Tac-Toe | Turn Taking | 
+    Group Estimation | Continous Turn Taking |
+    Pong | Continuous | Continuous movement
+    3D World | Continuous |
+    Grid World | Continuous | Discrete movements (asynch)
+
+
+    Continuous: You don't have to wait for other players to make a move. You can move and play the game.
+
+    Turn-Taking: You need to wait for your turn
+
+    Group Estimation: Working on the same problem but you don't have to wait for other players you can make your estimate at any time
+        - 
+-->
