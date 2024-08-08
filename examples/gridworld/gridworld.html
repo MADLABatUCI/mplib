@@ -25,10 +25,15 @@
         <h1>Waiting Room</h1>  
         <div class="containertext" id="messageWaitingRoom"></div>
     </div>
-    <div class="containertrans" id="gameScreen"  style="display:none;">
-        <h1 id="messageGame"></h1>
-        <a href="#" class="button2" id="leaveBtn">End Session</a>
-        <div class="game-container">
+    <div class="containertrans" id="gameScreen"    style="display:none">
+
+        <div class="header-container">
+           <h1 id="messageGame">You are</h1>
+           <a href="#" class="button2" id="leaveBtn">End Session</a>
+        </div>
+        <div class="game-container"></div>
+        
+        
           
     </div>
         
@@ -54,7 +59,7 @@
     
     <script src="/mplib/src/mpconfig.js"></script>
     <script type="module" src="/mplib/src/mplib.js" async></script>
-    <script src="/mplib/examples/gridworld/KeyPressListener.js"></script>
+    <!--    <script src="/mplib/examples/gridworld/KeyPressListener.js"></script>  -->
     <script type="module" src="/mplib/examples/gridworld/gridworld.js"></script>
 </body>
 

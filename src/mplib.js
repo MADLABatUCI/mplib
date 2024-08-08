@@ -162,6 +162,9 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, listen
             listenerPaths = [ '' ];
         }
 
+        // Do some house cleaning of the database by removing states that are no longer associated with active sessions (e.g. user closed browser)
+        removeOrphanedStatePaths();
+
         // Reset the session info information
         startTime = new Date(); // record the time at which the library was started (typically start of reading instructions)
         initSessionInfo();
@@ -169,8 +172,56 @@ export function initializeMPLIB( sessionConfigNow , studyIdNow , funList, listen
 
         initializeFirebaseListeners();
     }
+}
 
-    
+async function removeOrphanedStatePaths() {
+     
+    // Read out the states data for this study
+    let statesData = await readData( `${studyId}/states` );
+
+    if (statesData != null) {
+        // If there is state data, create an array of all session IDs associated with state data
+        let listSessionsinStates = Object.keys( statesData );
+
+        // Now create a list of all active sessions (IDs)
+        let sessionsData = await readData( `${studyId}/sessions` ); 
+        let listSessions = [];
+        if (sessionsData != null) {
+            listSessions = Object.keys( sessionsData );
+        }
+
+        // Find the session IDs that are associated with states but are not associated with active sessions
+        let difference = listSessionsinStates.filter(x => !listSessions.includes(x));
+
+        difference.forEach(sessionidnow => {
+            myconsolelog(`State path with no active session: ${sessionidnow}`);
+            try {
+                remove(ref(db, `${studyId}/states/${sessionidnow}`));
+                myconsolelog(".... Data removed successfully.");
+            } catch (error) {
+                myconsolelog("Error removing data: ", error);
+            }
+
+        });
+    }
+}
+
+// Experimental feature: 
+// reading the state at a given path
+async function readData(path) {
+    const dbRef = ref(db, path );
+    try {
+        const snapshot = await get(dbRef);
+        if (snapshot.exists()) {
+            return snapshot.val();
+        } else {
+            myconsolelog("No data available");
+            return null;
+        }
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
 }
 
 function initializeFirebaseListeners() {

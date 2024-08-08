@@ -10,20 +10,30 @@
   border-radius: 15px;
   /*box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);*/
   width: 80%;
-  max-width: 800px;
-  min-width: 800px;
-  margin: 20px 0px; 
+  max-width: 740px;
+  min-width: 740px;
+  /*margin: 20px 0px; */
 }
 
 .game-container {
   /*position: relative;*/
-  margin-top: 70;
+  margin-top: 10;
   width: 240px;
   height: 240px;
   background: url(./images/map.png) no-repeat no-repeat;
   transform: scale(3);
   transform-origin: left top; /* Ensure scaling starts from the top-left */
   image-rendering: pixelated;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-container h1 {
+  margin: 0;
 }
 
 .player-info {
