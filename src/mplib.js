@@ -562,29 +562,30 @@ export async function readState(path) {
 // This function allows for direct changes to a gamestate without checking for conflicts
 // Use these updates to speed up games with continuous movements where players' movements do
 // not conflict with each other
-export function updateStateDirect(path, newState, optionalParamSkipRecord = false ) {
+export function updateStateDirect(path, newState, optionalDescription = '' ) {
     let refNow = ref(db, `${studyId}/states/${si.sessionId}/${path}`);
     if (newState == null) {
         // If the proposed state is null, use that to remove the node (so we can clean up the gamestate for players who leave the game)
-        remove(refNow).then( () => { recordEventData( path, newState, optionalParamSkipRecord )});
+        remove(refNow).then( () => { recordEventData( path, newState, optionalDescription )});
     } else {
         // Note that with the firebase update function, it only changes the fields indicated in newState and leaves all other fields intact
         if (typeof newState === 'object') {
-            update(refNow, newState).then( () => { recordEventData( path, newState, optionalParamSkipRecord )});;
+            update(refNow, newState).then( () => { recordEventData( path, newState, optionalDescription )});;
         } else {
-            set(refNow, newState).then( () => { recordEventData( path, newState, optionalParamSkipRecord )});;
+            set(refNow, newState).then( () => { recordEventData( path, newState, optionalDescription )});;
         }
     }
 }
 
-function recordEventData(path, state, skipRecord ) {
+function recordEventData(path, state, optionalDescription ) {
     // Are we recording the data?
-    if ((sessionConfig.recordData) && (!skipRecord)) {
+    if (sessionConfig.recordData) {
         let returnResult = {
             s: state,
             t: serverTimestamp(),
             pId: si.playerId,
             p: path,
+            d: optionalDescription
         };
         
         let newDataRef = push(recordEventsRef);

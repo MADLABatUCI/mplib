@@ -367,9 +367,8 @@ function updateBallPosition() {
         // Send this new ball position to all players
        let path = 'b'; let newState = { x: newBallX, y: newBallY, sx: newBallSpeedX, sy: newBallSpeedY, r: doResetBall };
 
-       // Update the state with the new ball position. The flag "sametrajectory" is used to skip the saving of the ball position to  
-       // the saved data if the ball is continuing on a straight path. This saves space in the event stream 
-       if (hasControl()) updateStateDirect(path, newState, sameTrajectory );
+       // Update the state with the new ball position.  
+       if (hasControl()) updateStateDirect(path, newState );
        
     }
     

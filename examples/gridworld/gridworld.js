@@ -226,7 +226,7 @@ function placeCoin() {
       let newState = {
             x,y
           };
-      updateStateDirect(id, newState);
+      updateStateDirect(id, newState, 'placeCoin');
   }
   
   const coinTimeouts = [2000, 3000, 4000, 5000];
@@ -259,7 +259,7 @@ function handleArrowPress(xChange=0, yChange=0) {
         // Remove this coin
         let path = `coins/${key}`;
         let newState = null;
-        updateStateDirect(path, newState);
+        updateStateDirect(path, newState, 'removeCoin');
     }
 
     // Broadcast this new player position to the database
@@ -272,7 +272,7 @@ function handleArrowPress(xChange=0, yChange=0) {
           y: newY,
           coins: newCoinCount
         };
-    updateStateDirect(path, newState);
+    updateStateDirect(path, newState, 'updatePlayerPosition');
 
   }
 }
@@ -314,7 +314,7 @@ async function initGame() {
           y,
           coins: 0,
         };
-    updateStateDirect(path, newState);
+    updateStateDirect(path, newState,'placePlayer');
 
     // Place first coin
     placeCoin();
@@ -455,7 +455,7 @@ function removePlayerState() {
   // Send a null state to this player in the database, which removes the database entry
   let path = `players/${getCurrentPlayerId()}`;
   let newState = null;
-  updateStateDirect( path, newState);
+  updateStateDirect( path, newState, 'removePlayer');
 }
 
 // --------------------------------------------------------------------------------------
