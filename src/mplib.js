@@ -502,7 +502,7 @@ function startSession() {
 
 // Handle event of player closing browser window
 window.addEventListener('beforeunload', function (event) {
-    if (si.sessionInitiated) {
+    if ((si.sessionInitiated) && (si.status !== 'endSession')) {
         // Only remove this player when the session started      
         if (sessionConfig.recordData) {              
             // Update the database here because the browser apparently will not wait until the transaction is finished and therefore 
@@ -526,7 +526,7 @@ window.addEventListener('beforeunload', function (event) {
 // When a client's browser comes into focus, it becomes eligible for object control
 window.addEventListener('focus', function () {
     focusStatus = 'focus';
-    if (si.sessionInitiated) {
+    if ((si.sessionInitiated) && (si.status !== 'endSession')) {
         myconsolelog('Player is in focus');
         sessionUpdate('focus', si.playerId);
     }
@@ -535,7 +535,7 @@ window.addEventListener('focus', function () {
 // When a client's browser is out of focus, it becomes ineligible for object control
 window.addEventListener('blur', function () {
     focusStatus = 'blur';
-    if (si.sessionInitiated) {
+    if ((si.sessionInitiated) && (si.status !== 'endSession')) {
         myconsolelog('Player has lost focus');
         sessionUpdate('blur', si.playerId);
     }
