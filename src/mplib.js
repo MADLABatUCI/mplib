@@ -3,6 +3,13 @@
    ----------------------------------------------------------
 */
 
+/* To do
+   Resolve inconsistency between setting allowReplacements to true and setting minimum and maximum number of players to the same number. The behavior for this setting is not well defined 
+   Maybe only allow replacements if the minimum and maximum number of players is not the same?
+
+   Add a waiting room time out callback
+*/
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js"; // "./firebase/firebase-auth.js"; 
 import {
