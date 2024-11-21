@@ -364,7 +364,7 @@ function updateOngoingSession() {
 
 function endSession() {
     /*
-        Functionality to invoke when ending a session.
+        Function invoked by MPLIB when ending a session. Do *not* call this function yourself (use leaveSession for this purpose)
 
         This function does the following:
             - Displays the finish screen (hides all other divs)
