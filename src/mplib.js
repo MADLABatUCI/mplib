@@ -702,7 +702,7 @@ async function sessionUpdate(action, thisPlayer, extraArg ) {
     }).then(result => {
         let newState = result.snapshot.val();
         if (!result.committed) {
-            myconsolelog('Transaction failed');
+            myconsolelog(`Transaction failed for action=${action} and player=${thisPlayer}`);
         } else {
             if ((sessionConfig.recordData) && (action == 'join') ) {
                 // Recording data for player joining
