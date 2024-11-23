@@ -363,7 +363,7 @@ function triggerSessionCallback( session , sessionId ) {
                     // Leave session immediately
                     //si.sessionErrorCode = 3;
                     //si.sessionErrorMsg = 'Number of players fell below minimum needed';
-                    si.status = 'endSession';
+                    si.status = 'endSession'; // This should produce an error when minplayer 
                     leaveSession();
                     
                 }                                         
