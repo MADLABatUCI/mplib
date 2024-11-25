@@ -4,6 +4,8 @@
 */
 
 /* To do 
+   Test the change in focus
+   
    When a player removes a session, they should also remove the state associated with the session
 
    When minplayer=maxplayer, and the session was active before, check that a new player should not be able to join  
@@ -121,25 +123,6 @@ export function getCurrentPlayerArrivalIndexStable() {
 
 export function getSessionId() {
     return si.sessionId;
-}
-
-export function anyPlayerTerminatedAbnormally() {
-    // Temporary code
-    if (si.sessionErrorCode == 4) {
-        return true;
-    } else {
-        return false;
-    }
-
-    /*
-    if (si.allPlayersEver) {
-        let players = si.allPlayersEver; 
-        const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
-        return hasAbnormalStatus;
-    } else {
-        return false;
-    }
-    */
 }
 
 export function getSessionError() {
@@ -361,9 +344,7 @@ function triggerSessionCallback( session , sessionId ) {
         si.playerIds.forEach(playerId => {
             const rank = getPlayerRank(playerId, si);
             si.allPlayersEver[playerId].arrivalIndexActivePlayers = rank; // Add rank property to the player object
-            //const stableRank = getPlayerRankStable(playerId, si);
-            //si.allPlayersEver[playerId].arrivalIndexActivePlayersStable = stableRank; // Add stable rank property to the player object
-        });
+       });
         getStableRanks( si.allPlayersEver );
         
         numPlayersBefore = si.numPlayers;
@@ -409,16 +390,11 @@ function triggerSessionCallback( session , sessionId ) {
             }, 1000);
         }
         
-         
-
-
     } else if (si.numPlayers !== numPlayersBefore) {
         // Redo the mapping of the arrival index for the currently active players
         si.playerIds.forEach(playerId => {
             const rank = getPlayerRank(playerId, si);
             si.allPlayersEver[playerId].arrivalIndexActivePlayers = rank; // Add rank property to the player object
-            //const stableRank = getPlayerRankStable(playerId, si);
-            //si.allPlayersEver[playerId].arrivalIndexActivePlayersStable = stableRank; // Add stable rank property to the player object
         });
         getStableRanks( si.allPlayersEver );
 
@@ -431,17 +407,7 @@ function triggerSessionCallback( session , sessionId ) {
                 // Case where a waiting room countdown has started on this client but another player has left the session during the countdown
                 // ...
             } else {
-                callback_sessionChange.updateOngoingSession();                                        
-                
-                // Check if the number of players is below the minimum
-                if (si.numPlayers < sessionConfig.minPlayersNeeded) {
-                    // Leave session immediately
-                    //si.sessionErrorCode = 3;
-                    //si.sessionErrorMsg = 'Number of players fell below minimum needed';
-                    si.status = 'endSession';  
-                    leaveSession();
-                    
-                }                                         
+                callback_sessionChange.updateOngoingSession();                                                                              
             }
             
         }
@@ -450,9 +416,6 @@ function triggerSessionCallback( session , sessionId ) {
     // Does this player have control?
     playerHasControl = (session.playerControl == si.playerId);
 }
-
-
-
 
 
 // Function for player wanting to join a session
@@ -494,7 +457,7 @@ export function joinSession() {
 export async function leaveSession() {
     // Run a transaction to remove this player
     sessionUpdate('remove', si.playerId, 'normal').then(result => {
-        myconsolelog( "Then execution Line 428.... ")
+        //myconsolelog( "Then execution Line 428.... ")
         if (sessionConfig.recordData) {                         
             let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);
             // Get the object that stores all information about this player
@@ -516,19 +479,6 @@ export async function leaveSession() {
         // remove the listener for game state
         for (let i=0; i<listenerPaths.length; i++) {
             off(stateRef[i]);
-
-            // Trying to find error occurring here....
-            /*
-            try {
-                if (result.sessionsState === null) {
-                    // The state can be removed as there are no more players left in this session
-                    remove(stateRef[i]);
-                }
-            } catch (error) {
-                console.error("An error occurred:", error);
-                // Handle the error appropriately (e.g., logging, retrying, or notifying the user)
-            }
-           */
 
             if ((result !== undefined) && (result.sessionsState === null)) {
                 // The state can be removed as there are no more players left in this session
@@ -621,7 +571,6 @@ window.addEventListener('beforeunload', function (event) {
     }
 });
 
-/*
 // When a client's browser comes into focus, it becomes eligible for object control
 window.addEventListener('focus', function () {
     focusStatus = 'focus';
@@ -639,7 +588,6 @@ window.addEventListener('blur', function () {
         sessionUpdate('blur', si.playerId);
     }
 });
-*/
 
 // Experimental feature: 
 // reading the state at a given path
@@ -793,22 +741,11 @@ async function sessionUpdate(action, thisPlayer, extraArg ) {
         // Ensure that event listeners are not triggered for intermediate states
         applyLocally: false
     }).then(result => {
-        myconsolelog( "Then execution line 725...")
+        //myconsolelog( "Then execution line 725...")
         let newState = result.snapshot.val();
         if (!result.committed) {
             myconsolelog(`Transaction failed for action=${action} and player=${thisPlayer}`);
-        } else {
-            /*
-            if ((sessionConfig.recordData) && (action == 'join') ) {
-                // Recording data for player joining
-                  
-                // Get a database reference to the player we are updating  
-                let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${thisPlayer}/`);        
-                let playerInfo = newState[si.sessionId].allPlayersEver[thisPlayer];              
-                update(recordPlayerRef, playerInfo);
-            } 
-            */
-        }
+        } 
 
         let returnResult = {
             isSuccess: result.committed, action: action, sessionsState: newState,

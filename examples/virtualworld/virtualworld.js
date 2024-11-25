@@ -15,7 +15,7 @@ import {
     updateStateTransaction,  
     hasControl,
     getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
-    getCurrentPlayerArrivalIndexStable,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo,
+    getCurrentPlayerArrivalIndexStable,getSessionId,getSessionError,getWaitRoomInfo,
     isBrowserCompatible
 } from "/mplib/src/mplib.js";
 
@@ -536,7 +536,10 @@ function endSession(sessionInfo) {
 
     let err = getSessionError();
 
-    if (err.errorCode == 1) {
+    if (err.errorCode == 4) {
+        // Another player closed their window or were disconnected prematurely
+        messageFinish.innerHTML = `<p>Session ended abnormally because the other player closed their window or was disconnected</p>`;
+    } else if (err.errorCode == 1) {
         // No sessions available
         messageFinish.innerHTML = `<p>Session ended abnormally because there are no available sessions to join</p>`;
     } else if (err.errorCode==2) {

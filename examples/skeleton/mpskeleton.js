@@ -17,7 +17,7 @@ import {
     updateStateTransaction,  
     hasControl,
     getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
-    getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
+    getCurrentPlayerArrivalIndex,getSessionId,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
 // -------------------------------------
@@ -39,8 +39,8 @@ const studyId = 'skeleton';
 
 // Configuration setting for the session
 let sessionConfig = {
-    minPlayersNeeded: 3, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
-    maxPlayersNeeded: 3, // Maximum number of players allowed in a session
+    minPlayersNeeded: 1, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
+    maxPlayersNeeded: 2, // Maximum number of players allowed in a session
     maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
     allowReplacements: false, // Allow replacing any players who leave an ongoing session?
     exitDelayWaitingRoom: 0, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
@@ -184,22 +184,10 @@ function updateWaitingRoom() {
     }
 }
 
-function startSession() {
-    /*
-        Funtionality to invoke when starting a session.
-
-        This function does the following:
-            - Displays the game screen
-            - Logs the start of the game with the session ID and timestamp
-            - Displays additional "game started" messages
-    */
+function showSessionInfo() {
     let playerId = getCurrentPlayerId(); // the playerId for this client
     let playerIds = getCurrentPlayerIds(); // the list of current players
     let numPlayers = getNumberCurrentPlayers(); // the current number of players
-            
-    instructionsScreen.style.display = 'none';
-    waitingRoomScreen.style.display = 'none';
-    gameScreen.style.display = 'block';
 
     let dateString = timeStr( getPlayerInfo( playerId ).sessionStartedAt);
     let str = `Started game with session id ${getSessionId()} with ${numPlayers} players at ${dateString}.`;
@@ -239,6 +227,22 @@ function startSession() {
     messageGame.innerHTML = str2;
 }
 
+function startSession() {
+    /*
+        Funtionality to invoke when starting a session.
+
+        This function does the following:
+            - Displays the game screen
+            - Logs the start of the game with the session ID and timestamp
+            - Displays additional "game started" messages
+    */            
+    instructionsScreen.style.display = 'none';
+    waitingRoomScreen.style.display = 'none';
+    gameScreen.style.display = 'block';
+
+    showSessionInfo();
+}
+
 function updateOngoingSession() {
     /*
         Functionality to invoke when updating an ongoing session.
@@ -246,51 +250,12 @@ function updateOngoingSession() {
         This function does the following:
             - Currently the same code as startSession
             - Does not include the logging aspect of startSession
-    */
-    let playerId = getCurrentPlayerId(); // the playerId for this client
-    let playerIds = getCurrentPlayerIds(); // the list of current players
-    let numPlayers = getNumberCurrentPlayers(); // the current number of players
-            
+    */      
     instructionsScreen.style.display = 'none';
     waitingRoomScreen.style.display = 'none';
     gameScreen.style.display = 'block';
 
-    let dateString = timeStr( getPlayerInfo( playerId ).sessionStartedAt);
-    let str = `Started game with session id ${getSessionId()} with ${numPlayers} players at ${dateString}.`;
-    myconsolelog( str );
-
-    let str2 = `<p>Session ID: ${getSessionId()}$</p>`;
-    str2 += `<p>Player ID: ${playerId}$</p>`;
-
-    str2 += `<p>Current number of players (${numPlayers} total):`;
-    for (let i=0; i<numPlayers; i++) {
-        let playerNow = playerIds[i];
-        let playerInfo = getPlayerInfo( playerNow );
-        str2 += `<br>`;
-        if (playerId===playerNow) str2 += `<b>`;
-        str2 += `Rank among active #${playerInfo.arrivalIndexActivePlayers}, Stable Index  #${playerInfo.arrivalIndexActivePlayersStable}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
-        if (playerId===playerNow) str2 += `</b>`;
-    }
-    str2 += `</p>`;
-
-    let allPlayersEver = getAllPlayerIds();
-    let numPlayersEver = getNumberAllPlayers();
-    str2 += `<p>History of players that ever joined this session or waiting room (${numPlayersEver} total):`;
-    for (let i=0; i<numPlayersEver; i++) {
-        let playerNow = allPlayersEver[i];
-        let playerInfo = getPlayerInfo( playerNow );
-        str2 += `<br>Arrival #${playerInfo.arrivalIndex}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
-        str2 += ` Arrival time: ${timeStr(playerInfo.sessionStartedAt)}`;
-        if (playerInfo.leftGameAt != 0) {
-            str2 += ` Finish time: ${timeStr(playerInfo.leftGameAt)}`;
-        }
-        if (playerInfo.finishStatus) {
-            str2 += ` Finish status: ${playerInfo.finishStatus}`;
-        }
-    }
-    str2 += `</p>`;
-
-    messageGame.innerHTML = str2;
+    showSessionInfo();
 }
 
 function endSession() {
@@ -311,7 +276,7 @@ function endSession() {
 
     let err = getSessionError();
 
-    if ( anyPlayerTerminatedAbnormally()) {
+    if (err.errorCode == 4) {
         // Another player closed their window or were disconnected prematurely
         messageFinish.innerHTML = `<p>Session ended abnormally because another player closed their window or was disconnected</p>`;
     } else if (err.errorCode == 1) {

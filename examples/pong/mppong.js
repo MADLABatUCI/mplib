@@ -14,7 +14,7 @@ import {
     updateStateTransaction,  
     hasControl,
     getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
-    getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
+    getCurrentPlayerArrivalIndex,getSessionId,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
 
@@ -690,7 +690,7 @@ function endSession() {
     }
 
     let err = getSessionError();
-    if ( anyPlayerTerminatedAbnormally()) {
+    if (err.errorCode == 4) {
         // Another player closed their window or were disconnected prematurely
         messageFinish.innerHTML = `<p>Session ended abnormally because the other player closed their window or was disconnected</p>`;
     } else if (err.errorCode == 1) {
