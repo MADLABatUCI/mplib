@@ -4,6 +4,8 @@
 */
 
 /* To do 
+   when one player navigates away, the session does get terminated for all players but the "abnormal" finishStatus only shows up in recordedData
+
    Q: how can transaction for remove player work if the session is already removed?
    A: let allowed = true;
        if (allSessions !== null) {
@@ -131,6 +133,14 @@ export function getSessionId() {
 }
 
 export function anyPlayerTerminatedAbnormally() {
+    // Temporary code
+    if (si.sessionErrorCode == 4) {
+        return true;
+    } else {
+        return false;
+    }
+
+    /*
     if (si.allPlayersEver) {
         let players = si.allPlayersEver; 
         const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
@@ -138,6 +148,7 @@ export function anyPlayerTerminatedAbnormally() {
     } else {
         return false;
     }
+    */
 }
 
 export function getSessionError() {
@@ -279,7 +290,10 @@ function initializeFirebaseListeners() {
         if ((!sessionIsThere) && (si.status == 'sessionStarted')) {
             //If another player cleaned out the session and 
             // the current player has an active session, need to end this session
-            si.status = 'endSession';  
+            si.status = 'endSession'; 
+            si.sessionErrorCode = 4;
+            si.sessionErrorMsg = 'Session ended abnormally because another player closed their window or was disconnected';
+             
             leaveSession();
         }
     });

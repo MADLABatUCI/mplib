@@ -313,7 +313,7 @@ function endSession() {
 
     if ( anyPlayerTerminatedAbnormally()) {
         // Another player closed their window or were disconnected prematurely
-        messageFinish.innerHTML = `<p>Session ended abnormally because the other player closed their window or was disconnected</p>`;
+        messageFinish.innerHTML = `<p>Session ended abnormally because another player closed their window or was disconnected</p>`;
     } else if (err.errorCode == 1) {
         // No sessions available
         messageFinish.innerHTML = `<p>Session ended abnormally because there are no available sessions to join</p>`;
