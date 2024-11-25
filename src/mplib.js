@@ -4,6 +4,8 @@
 */
 
 /* To do 
+   When a player removes a session, they should also remove the state associated with the session
+
    When minplayer=maxplayer, and the session was active before, check that a new player should not be able to join  
 
    Resolve inconsistency between setting allowReplacements to true and setting minimum and maximum number of players to the same number. The behavior for this setting is not well defined 
