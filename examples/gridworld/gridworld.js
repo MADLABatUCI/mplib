@@ -5,6 +5,8 @@
 
 /* 
 
+There can be some left over states (coins) when last player leaves
+
 Graphics borrowed from: https://www.youtube.com/watch?v=xhURh2RDzzg&list=PLfO8lBNeR6KJiOQx1an2Le96DmcP3Ggqe&index=1
 
 Issues:

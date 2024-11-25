@@ -4,21 +4,10 @@
 */
 
 /* To do 
-   when one player navigates away, the session does get terminated for all players but the "abnormal" finishStatus only shows up in recordedData
-
-   Q: how can transaction for remove player work if the session is already removed?
-   A: let allowed = true;
-       if (allSessions !== null) {
-
-   cannot read properties of undefined reading sessionState 446
-   --> somehow transaction for removing player can fail (this only happens with three players)
-   --> solution is to retry the transaction a few times?
-   --> or, the player who is removing themselves will ALSO remove all other players if the logic dictates this
+   When minplayer=maxplayer, and the session was active before, check that a new player should not be able to join  
 
    Resolve inconsistency between setting allowReplacements to true and setting minimum and maximum number of players to the same number. The behavior for this setting is not well defined 
    Maybe only allow replacements if the minimum and maximum number of players is not the same?
-
-   Add a waiting room time out callback
 */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
@@ -835,7 +824,7 @@ async function sessionUpdate(action, thisPlayer, extraArg ) {
 
 function removePlayerSession( allSessions , thisPlayer, finishStatus ) {
     let allowed = true;
-    if (allSessions !== null) {
+    if (allSessions !== null) { // Note that if this fails, there is no more session because it was deleted by another player; we still set "allowed" to be true so the tranaction will succeed and this player can continue with cleanup
         // Find the session associated with this player
         let sessionIdThis = getSessionByPlayerId(allSessions, thisPlayer);
         if (sessionIdThis === null) {
