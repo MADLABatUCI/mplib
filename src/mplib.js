@@ -3,7 +3,11 @@
    ----------------------------------------------------------
 */
 
-/* To do
+/* To do 
+   Q: how can transaction for remove player work if the session is already removed?
+   A: let allowed = true;
+       if (allSessions !== null) {
+
    cannot read properties of undefined reading sessionState 446
    --> somehow transaction for removing player can fail (this only happens with three players)
    --> solution is to retry the transaction a few times?
@@ -109,14 +113,14 @@ export function getNumberAllPlayers() {
     return Object.keys( si.allPlayersEver ).length;
 }
 
-// This function returns the rank of the current player among the currently active players
+// This function returns the rank of the current player among the *currently* active players
 // Note that this index is not stable over time if new players can join an active session or currently active players can leave a session
 // without this action terminating the session  
 export function getCurrentPlayerArrivalIndex() {
     return si.allPlayersEver[ si.playerId ].arrivalIndexActivePlayers;
 }
 
-// This function returns the rank of the current player among all players who were ever active 
+// This function returns the rank of the current player among all players who were *ever* active 
 // Note that this index *is* stable over time even if new players join an active session or currently active players leave a session
 export function getCurrentPlayerArrivalIndexStable() {
     return si.allPlayersEver[ si.playerId ].arrivalIndexActivePlayersStable;
@@ -255,6 +259,7 @@ function initializeFirebaseListeners() {
     onValue(sessionsRef, (snapshot) => {
         const whNode = snapshot.key;
         const sessions = snapshot.val();
+        let sessionIsThere = false;
         if (sessions !== null) {
             var keys = Object.keys(sessions);
             for (var i = 0; i < keys.length; i++) {
@@ -264,10 +269,18 @@ function initializeFirebaseListeners() {
                     // Does this session involve this player?
                     if (si.playerId in session.players) {
                         triggerSessionCallback( session , sessionId );
+                        sessionIsThere = true;
                         break;
                     }
                 }
             };
+        };
+        
+        if ((!sessionIsThere) && (si.status == 'sessionStarted')) {
+            //If another player cleaned out the session and 
+            // the current player has an active session, need to end this session
+            si.status = 'endSession';  
+            leaveSession();
         }
     });
 
@@ -324,6 +337,14 @@ function triggerSessionCallback( session , sessionId ) {
         si.arrivalIndex = session.players[si.playerId].arrivalIndex;
         numPlayersBefore = si.numPlayers;
         si.status = 'waitingRoomStarted';
+        
+        if (sessionConfig.recordData) {
+            // Get a database reference to the player we are updating  
+            let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);        
+            let playerInfo = si.allPlayersEver[si.playerId];              
+            update(recordPlayerRef, playerInfo);
+        } 
+
         callback_sessionChange.joinedWaitingRoom(); // trigger callback 
     } else if ((currentStatus == 'active') & (!si.sessionStarted)) {
         si.sessionInitiated = true;
@@ -344,6 +365,14 @@ function triggerSessionCallback( session , sessionId ) {
         
         if (sessionConfig.exitDelayWaitingRoom==0) {
             si.status = 'sessionStarted';
+            
+            if (sessionConfig.recordData) {
+                // Get a database reference to the player we are updating  
+                let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);        
+                let playerInfo = si.allPlayersEver[si.playerId];              
+                update(recordPlayerRef, playerInfo);
+            }
+
             startSession(); // Can start the session without delay
         } else {
             // Delay the start of entering the session
@@ -362,11 +391,22 @@ function triggerSessionCallback( session , sessionId ) {
                 } else {
                     clearInterval(intervalId); 
                     si.status = 'sessionStarted';
+
+                    if (sessionConfig.recordData) {
+                        // Get a database reference to the player we are updating  
+                        let recordPlayerRef = ref(db, `${studyId}/recordedData/${si.sessionId}/players/${si.playerId}/`);        
+                        let playerInfo = si.allPlayersEver[si.playerId];              
+                        update(recordPlayerRef, playerInfo);
+                    }
+
                     startSession();
                 }
             }, 1000);
         }
         
+         
+
+
     } else if (si.numPlayers !== numPlayersBefore) {
         // Redo the mapping of the arrival index for the currently active players
         si.playerIds.forEach(playerId => {
@@ -576,6 +616,7 @@ window.addEventListener('beforeunload', function (event) {
     }
 });
 
+/*
 // When a client's browser comes into focus, it becomes eligible for object control
 window.addEventListener('focus', function () {
     focusStatus = 'focus';
@@ -593,6 +634,7 @@ window.addEventListener('blur', function () {
         sessionUpdate('blur', si.playerId);
     }
 });
+*/
 
 // Experimental feature: 
 // reading the state at a given path
@@ -751,6 +793,7 @@ async function sessionUpdate(action, thisPlayer, extraArg ) {
         if (!result.committed) {
             myconsolelog(`Transaction failed for action=${action} and player=${thisPlayer}`);
         } else {
+            /*
             if ((sessionConfig.recordData) && (action == 'join') ) {
                 // Recording data for player joining
                   
@@ -759,6 +802,7 @@ async function sessionUpdate(action, thisPlayer, extraArg ) {
                 let playerInfo = newState[si.sessionId].allPlayersEver[thisPlayer];              
                 update(recordPlayerRef, playerInfo);
             } 
+            */
         }
 
         let returnResult = {
@@ -801,9 +845,9 @@ function removePlayerSession( allSessions , thisPlayer, finishStatus ) {
             let sessionStartTime = (session.sessionStartedAt == 0) ? estimatedServerTime : session.sessionStartedAt;
             let hoursElapsed = (estimatedServerTime - sessionStartTime) / (1000 * 60 * 60);
 
-            // If no players left, delete the session
             let numP = Object.keys(allSessions[sessionIdThis].players).length;
-            if (numP == 0) {
+            if (numP < sessionConfig.minPlayersNeeded) { 
+                // If there are not enough players left, delete the session
                 // this will produce a null outcome for this session which then be deleted if transaction is successful
                 delete allSessions[sessionIdThis];
 
