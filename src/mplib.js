@@ -1,11 +1,11 @@
 /* ---------------------------------------------------------- 
-      Firebase MultiPlayer Library v. 1.30
+      Firebase MultiPlayer Library v. 1.40
    ----------------------------------------------------------
 */
 
-/* To do 
-   Test the change in focus
-   
+/* To do    
+   Pong does not terminate properly. When a player ends a session normally, an MPLIB error message "Session ended abnormally" is produced
+
    When a player removes a session, they should also remove the state associated with the session
 
    When minplayer=maxplayer, and the session was active before, check that a new player should not be able to join  
@@ -482,7 +482,9 @@ export async function leaveSession() {
 
             if ((result !== undefined) && (result.sessionsState === null)) {
                 // The state can be removed as there are no more players left in this session
-                remove(stateRef[i]);
+                //remove(stateRef[i]);
+                const newState = null;
+                set( stateRef[i] , newState );
             }
         }
 
