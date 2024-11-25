@@ -39,8 +39,8 @@ const studyId = 'skeleton';
 
 // Configuration setting for the session
 let sessionConfig = {
-    minPlayersNeeded: 2, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
-    maxPlayersNeeded: 2, // Maximum number of players allowed in a session
+    minPlayersNeeded: 1, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
+    maxPlayersNeeded: 3, // Maximum number of players allowed in a session
     maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
     allowReplacements: false, // Allow replacing any players who leave an ongoing session?
     exitDelayWaitingRoom: 0, // Number of countdown seconds before leaving waiting room (if zero, player leaves waiting room immediately)
@@ -212,13 +212,16 @@ function startSession() {
     for (let i=0; i<numPlayers; i++) {
         let playerNow = playerIds[i];
         let playerInfo = getPlayerInfo( playerNow );
-        str2 += `<br>Arrival #${playerInfo.arrivalIndex},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        str2 += `<br>`;
+        if (playerId===playerNow) str2 += `<b>`;
+        str2 += `Rank among active #${playerInfo.arrivalIndexActivePlayers}, Stable Index  #${playerInfo.arrivalIndexActivePlayersStable}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        if (playerId===playerNow) str2 += `</b>`;
     }
     str2 += `</p>`;
 
     let allPlayersEver = getAllPlayerIds();
     let numPlayersEver = getNumberAllPlayers();
-    str2 += `<p>History of players ever joined this session (${numPlayersEver} total):`;
+    str2 += `<p>History of players that ever joined this session or waiting room (${numPlayersEver} total):`;
     for (let i=0; i<numPlayersEver; i++) {
         let playerNow = allPlayersEver[i];
         let playerInfo = getPlayerInfo( playerNow );
@@ -263,13 +266,16 @@ function updateOngoingSession() {
     for (let i=0; i<numPlayers; i++) {
         let playerNow = playerIds[i];
         let playerInfo = getPlayerInfo( playerNow );
-        str2 += `<br>Arrival #${playerInfo.arrivalIndex},  ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        str2 += `<br>`;
+        if (playerId===playerNow) str2 += `<b>`;
+        str2 += `Rank among active #${playerInfo.arrivalIndexActivePlayers}, Stable Index  #${playerInfo.arrivalIndexActivePlayersStable}, ID: ${playerNow} ${ playerId===playerNow ? '(you)' : '' }`;
+        if (playerId===playerNow) str2 += `</b>`;
     }
     str2 += `</p>`;
 
     let allPlayersEver = getAllPlayerIds();
     let numPlayersEver = getNumberAllPlayers();
-    str2 += `<p>History of players ever joined this session (${numPlayersEver} total):`;
+    str2 += `<p>History of players that ever joined this session or waiting room (${numPlayersEver} total):`;
     for (let i=0; i<numPlayersEver; i++) {
         let playerNow = allPlayersEver[i];
         let playerInfo = getPlayerInfo( playerNow );

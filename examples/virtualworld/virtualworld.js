@@ -15,7 +15,7 @@ import {
     updateStateTransaction,  
     hasControl,
     getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
-    getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo,
+    getCurrentPlayerArrivalIndexStable,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo,
     isBrowserCompatible
 } from "/mplib/src/mplib.js";
 
@@ -173,7 +173,7 @@ function removePlayerState() {
 
 
 function addSelf() {
-    id = `player${ getCurrentPlayerArrivalIndex() }`;
+    id = `player${ getCurrentPlayerArrivalIndexStable() }`;
 
     let radius = 8;
     let angle = Math.random() * 2 * Math.PI;
@@ -199,8 +199,8 @@ function addSelf() {
 
 
 /*
-function addSelf(arrivalIndex) {
-    id = `Player${arrivalIndex}`;
+function addSelf(arrivalIndexStable) {
+    id = `Player${arrivalIndexStable}`;
 
     // Generate a random position
     const position = new THREE.Vector3(Math.random() * 16 - 8, cameraHeight, Math.random() * 16 - 8);

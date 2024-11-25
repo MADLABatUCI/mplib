@@ -26,7 +26,7 @@ import {
   hasControl,
   readState,
   getCurrentPlayerId, getCurrentPlayerIds, getAllPlayerIds, getPlayerInfo,getNumberCurrentPlayers,getNumberAllPlayers,
-  getCurrentPlayerArrivalIndex,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
+  getCurrentPlayerArrivalIndex,getCurrentPlayerArrivalIndexStable,getSessionId,anyPlayerTerminatedAbnormally,getSessionError,getWaitRoomInfo
 } from "/mplib/src/mplib.js";
 
 // -------------------------------------
@@ -541,7 +541,7 @@ function startSession() {
   // Add the event listener for key presses
   //document.addEventListener('keydown', handleKeyDown);
 
-  //let str2 = `You are: Player${getCurrentPlayerArrivalIndex()}`;
+  //let str2 = `You are: Player${getCurrentPlayerStable()}`;
   //messageGame.innerHTML = str2;
 
   initGame();
