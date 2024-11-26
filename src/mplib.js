@@ -4,6 +4,8 @@
 */
 
 /* To do    
+   focus and blur session changes also call the triggerSessionCallback() and this leads to unexpected behavior; for example when there is a timer for exiting the waiting room
+
    Pong does not terminate properly. When a player ends a session normally, an MPLIB error message "Session ended abnormally" is produced
 
    When a player removes a session, they should also remove the state associated with the session
@@ -573,6 +575,7 @@ window.addEventListener('beforeunload', function (event) {
     }
 });
 
+/*
 // When a client's browser comes into focus, it becomes eligible for object control
 window.addEventListener('focus', function () {
     focusStatus = 'focus';
@@ -590,6 +593,7 @@ window.addEventListener('blur', function () {
         sessionUpdate('blur', si.playerId);
     }
 });
+*/
 
 // Experimental feature: 
 // reading the state at a given path
