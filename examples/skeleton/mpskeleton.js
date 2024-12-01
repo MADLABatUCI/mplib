@@ -39,7 +39,7 @@ const studyId = 'skeleton';
 
 // Configuration setting for the session
 let sessionConfig = {
-    minPlayersNeeded: 1, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
+    minPlayersNeeded: 2, // Minimum number of players needed; if set to 1, there is no waiting room (unless a countdown has been setup)
     maxPlayersNeeded: 2, // Maximum number of players allowed in a session
     maxParallelSessions: 0, // Maximum number of sessions in parallel (if zero, there are no limit)
     allowReplacements: false, // Allow replacing any players who leave an ongoing session?
