@@ -4,8 +4,8 @@
 */
 
 /* To do 
-   update removeOrphanedStatePaths() so sessions with status='terminated' will be removed (if all players have stopped)
-      
+   Do more testing across games
+     
    focus and blur session changes also call the triggerSessionCallback() and this leads to unexpected behavior; for example when there is a timer for exiting the waiting room
    Pong: when player has browser out of focus and controls the ball, the ball is very slow  
 
