@@ -53,6 +53,20 @@ const firebaseApp = initializeApp(firebasempConfig);
 const auth = getAuth(firebaseApp);
 const db = getDatabase(firebaseApp);
 
+//----------------------------------------------------------
+// Define some new functions we can use to collect metadata
+//----------------------------------------------------------
+function getOSAndBrowser() {
+    /*
+        Grab string information about user OS and Browser.
+
+        This information will be unparsed, it is up to the
+        user to parse the string and do with the information
+        what they wish.
+    */
+    const userAgent = navigator.userAgent;
+    return userAgent;
+};
 
 //------------------------------------------------------
 // Define some new functions we can use in other code
@@ -985,7 +999,10 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
                     arrivalIndex: count,
                     leftGameAt: 0,
                     finishStatus: 'na',
-                    urlparams: getUrlParameters()
+                    urlparams: getUrlParameters(),
+                    consented: true,
+                    consentTime: serverTimestamp(),
+                    metadata: getOSAndBrowser(),
                 };
                 allSessions[proposedSessionId].players[thisPlayer] = playerData1;
                 allSessions[proposedSessionId].allPlayersEver[thisPlayer] = playerData1;
@@ -1046,7 +1063,10 @@ function joinPlayerSession(  allSessions , thisPlayer ) {
                 arrivalIndex: 1,
                 leftGameAt: 0,
                 finishStatus: 'na',
-                urlparams: getUrlParameters()
+                urlparams: getUrlParameters(),
+                consented: true,
+                consentTime: serverTimestamp(),
+                metadata: getOSAndBrowser(),
             };
             let playerData2 = { [thisPlayer]: playerData1 };
             let saveData = {
