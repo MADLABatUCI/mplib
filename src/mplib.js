@@ -1151,7 +1151,7 @@ function sortSessions(sessions) {
     return sessionKeys;
 }
 
-function anyPlayerTerminatedAbnormally() {
+export function anyPlayerTerminatedAbnormally() {
     if (si.allPlayersEver) {
         let players = si.allPlayersEver; 
         const hasAbnormalStatus = Object.values(players).some(player => player.finishStatus === 'abnormal');
